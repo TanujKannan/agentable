@@ -1,0 +1,18 @@
+{
+  "agents": [
+    {
+      "name": "researcher",
+      "role_description": "Research AI trends in 2024 Senior Data Researcher\n - Uncover cutting-edge developments in Research AI trends in 2024\n",
+      "tools": [
+        "website_search_tool"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "agent": "researcher",
+      "description": "Conduct a thorough research about Research AI trends in 2024. Make sure you find any interesting and relevant information given the current year is 2024. Focus on recent developments, key trends, and significant breakthroughs. Analyze multiple reliable sources and cross-reference information for accuracy. Pay special attention to credible sources and up-to-date information.",
+      "expected_output": "A comprehensive list with 10 bullet points of the most relevant information about Research AI trends in 2024. Each bullet point should include specific details, sources, and dates where applicable. Organize the information from most important to least important."
+    }
+  ]
+}

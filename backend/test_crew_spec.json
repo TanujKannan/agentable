@@ -1,0 +1,56 @@
+{
+  "agents": [
+    {
+      "name": "researcher",
+      "source": "predefined",
+      "config_key": "researcher",
+      "tools": [
+        "WebSearch",
+        "WebsiteSearch"
+      ]
+    },
+    {
+      "name": "reporting_analyst",
+      "source": "predefined",
+      "config_key": "reporting_analyst",
+      "tools": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_1",
+      "name": "Research AI Trends in 2024",
+      "description": "Conduct a thorough research about AI trends in 2024. Make sure to find any interesting and relevant information given the current year is 2024. Focus on recent developments, key trends, and significant breakthroughs in artificial intelligence. Analyze multiple reliable sources and cross-reference information for accuracy. The research should cover various aspects such as advancements in machine learning, natural language processing, ethical considerations, and emerging technologies.",
+      "expected_output": "A comprehensive list with 10 bullet points of the most relevant information about AI trends in 2024. Each bullet point should include specific details, sources, and dates where applicable.",
+      "assigned_agent": "researcher",
+      "dependencies": [],
+      "output_file": null,
+      "params": {
+        "tool": "WebSearch",
+        "limit": 50,
+        "method": "latest_trends"
+      }
+    },
+    {
+      "id": "task_2",
+      "name": "Create Comprehensive Report on AI Trends",
+      "description": "Review the context gathered from the research on AI trends in 2024 and expand each topic into a full section for a report. Ensure the report is detailed and contains all relevant information. Analyze patterns, draw insights, and provide actionable recommendations based on the research findings. The report should be structured with an executive summary, detailed analysis, and recommendations for stakeholders in the AI field.",
+      "expected_output": "A fully fledged report with the main topics, each with a full section of information. Formatted as markdown without '```'. Include an executive summary, detailed analysis, and actionable recommendations.",
+      "assigned_agent": "reporting_analyst",
+      "dependencies": [
+        "task_1"
+      ],
+      "output_file": "AI_Trends_Report_2024.md",
+      "params": {
+        "tool": "FileReader",
+        "limit": 1,
+        "method": "compile_report"
+      }
+    }
+  ],
+  "crew_config": {
+    "process": "sequential",
+    "verbose": true
+  },
+  "user_query": "Research AI trends in 2024 and create a comprehensive report"
+}
