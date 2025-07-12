@@ -38,19 +38,54 @@ async def runCrew(prompt: str, run_id: str, manager):
         # Step 2: Create and execute CrewAI crew from the spec
         crew = await create_crew_from_spec(crew_spec, run_id, manager)
         
-        # Step 3: Execute the crew
+        # Step 3: Execute the crew with progress updates
         await manager.send_message(run_id, {
             "type": "log",
             "message": "Starting crew execution..."
         })
         
-        result = crew.kickoff()
+        # Send agent status updates before execution
+        for agent in crew.agents:
+            await manager.send_message(run_id, {
+                "type": "agent-update",
+                "message": f"Agent {agent.role} is ready"
+            })
+        
+        # Execute crew in thread pool to avoid blocking
+        import concurrent.futures
+        
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Send periodic updates during execution
+            await manager.send_message(run_id, {
+                "type": "log", 
+                "message": "Crew is working on your task..."
+            })
+            
+            # Execute crew
+            future = executor.submit(crew.kickoff)
+            
+            # Send progress updates while waiting
+            import time
+            start_time = time.time()
+            while not future.done():
+                await asyncio.sleep(2)  # Check every 2 seconds
+                elapsed = int(time.time() - start_time)
+                await manager.send_message(run_id, {
+                    "type": "log",
+                    "message": f"Still working... ({elapsed}s elapsed)"
+                })
+                
+                if elapsed > 300:  # 5 minute timeout
+                    future.cancel()
+                    raise Exception("Crew execution timeout")
+            
+            result = future.result()
         
         # Step 4: Send completion event
         await manager.send_message(run_id, {
             "type": "complete",
-            "outputRef": str(result),
-            "result": result
+            "message": "Crew execution completed successfully!",
+            "result": str(result)
         })
         
     except Exception as e:
