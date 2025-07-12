@@ -74,7 +74,7 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
             role=agent_spec.get("name"),
             goal=agent_spec.get("role_description"),
             backstory=agent_spec.get("role_description"),
-            tools=agent_tools
+            tools=agent_tools,
             verbose=True
         )
         agents.append(agent)
