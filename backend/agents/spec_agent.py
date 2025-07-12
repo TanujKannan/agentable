@@ -27,14 +27,9 @@ class SpecAgent:
         system_prompt = f"""
         You are a SpecAgent that converts user requests into CrewAI task specifications.
 
-        You have access to the following tools: {available_tools}
+        You only have access to the following tools: {available_tools}
         
         IMPORTANT: You must use the EXACT tool names from the list above. Do not use generic names like 'search' or 'llm'.
-        
-        Available tools:
-        - serper_dev_tool: For web searching and research
-        - website_search_tool: For searching within specific websites
-        - browserbase_load_tool: For browser automation and data extraction
         
         Given a user prompt, generate a JSON specification with the following structure:
         {{
@@ -74,11 +69,6 @@ class SpecAgent:
         - ResearchAgent: For research tasks
         - WritingAgent: For content generation
         
-        Use only these exact tool names:
-        - serper_dev_tool: For web searching and research
-        - website_search_tool: For searching within specific websites  
-        - browserbase_load_tool: For browser automation and data extraction
-        
         Always include relevant parameters in the params object.
         Respond with valid JSON only.
         """
@@ -99,6 +89,9 @@ class SpecAgent:
             
             content = response.choices[0].message.content
             crew_spec = json.loads(content)
+
+            print('CREW SPEC', crew_spec)
+            print('========================================')
             
             # Validate the structure
             if "tasks" not in crew_spec:

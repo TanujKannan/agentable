@@ -1,9 +1,8 @@
-from crewai_tools import BrowserbaseLoadTool, WebsiteSearchTool, SerperDevTool
+from crewai_tools import WebsiteSearchTool, SerperDevTool
 from typing import Any
 import os
 
 TOOL_REGISTRY = {
-    "browserbase_load_tool": BrowserbaseLoadTool,
     "website_search_tool": WebsiteSearchTool,
     "serper_dev_tool": SerperDevTool,
 }
