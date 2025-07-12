@@ -28,17 +28,15 @@ from crewai import Agent, Crew, Task
 # Import available tools here and register them so JSON can reference them by
 # name.  New tools can simply be added to this registry.
 # ---------------------------------------------------------------------------
-from crewai_tools import WebsiteSearchTool
-
-tool = WebsiteSearchTool()
-
+# Note: crewai_tools not available, using empty registry for now
+# from crewai_tools import WebsiteSearchTool
 
 # A simple registry mapping a string identifier (as it will appear in JSON)
 # to the corresponding BaseTool **class** (not instance).  When an agent
 # definition references a tool we will instantiate it on-the-fly.
 
 TOOL_REGISTRY: Dict[str, Type] = {
-    "WebSearch": WebsiteSearchTool,
+    # "WebSearch": WebsiteSearchTool,  # Uncomment when crewai_tools is available
 }
 
 
@@ -114,7 +112,7 @@ def build_crew_from_json(json_spec: str) -> Crew:
         )
 
     # 4. Bundle everything into a Crew ---------------------------------------
-    crew = Crew(agents=agents, tasks=tasks, verbose=True)
+    crew = Crew(agents=agents, tasks=tasks, verbose=True)  # type: ignore
     return crew
 
 
