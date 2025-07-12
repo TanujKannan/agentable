@@ -5,7 +5,9 @@ description = "agentable-backend using crewAI"
 authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.10,<3.13"
 dependencies = [
-    "crewai[tools]>=0.102.0,<1.0.0"
+    "crewai[tools]>=0.102.0,<1.0.0",
+    "fastapi>=0.114.2,<1.0.0",
+    "uvicorn[standard]>=0.25.0,<1.0.0"
 ]
 
 [project.scripts]
@@ -14,6 +16,7 @@ run_crew = "agentable_backend.main:run"
 train = "agentable_backend.main:train"
 replay = "agentable_backend.main:replay"
 test = "agentable_backend.main:test"
+serve = "agentable_backend.api:start"
 
 [build-system]
 requires = ["hatchling"]
