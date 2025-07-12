@@ -43,7 +43,7 @@ class SpecAgent:
           "tasks": [
             {
               "id": "unique_task_id",
-              "agent": "AgentType",
+              "agent": "agent_name",
               "description": "Clear task description with variables like {prompt}",
               "expected_output": "What the task should produce",
               "params": {
