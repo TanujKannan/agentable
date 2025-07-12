@@ -152,16 +152,6 @@ export default function Home() {
               <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6">
                 <CardTitle className="text-lg font-medium flex items-center justify-between">
                   Create Task
-                  {status !== 'idle' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resetSession}
-                      className="text-white border-white hover:bg-white hover:text-purple-600"
-                    >
-                      New Task
-                    </Button>
-                  )}
                 </CardTitle>
               </div>
               <CardContent className="p-6">
@@ -183,7 +173,7 @@ export default function Home() {
                   <Button
                     type="submit"
                     disabled={!prompt.trim() || status === 'running'}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-600"
                     size="lg"
                   >
                     {status === 'running' ? (
