@@ -57,6 +57,8 @@ async def run_endpoint(request: RunRequest):
 @app.websocket("/api/ws/{run_id}")
 async def websocket_endpoint(websocket: WebSocket, run_id: str):
     await manager.connect(websocket, run_id)
+    print('CONNECTED')
+    print("================================================")
     try:
         while True:
             await websocket.receive_text()

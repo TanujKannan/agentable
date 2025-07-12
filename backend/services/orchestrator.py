@@ -14,6 +14,15 @@ async def runCrew(prompt: str, run_id: str, manager):
     3. Executes the crew and broadcasts events via WebSocket
     """
     try:
+        max_wait = 10  # seconds
+        wait_time = 0
+        while run_id not in manager.active_connections and wait_time < max_wait:
+            await asyncio.sleep(0.1)
+            wait_time += 0.1
+        
+        if run_id not in manager.active_connections:
+            raise Exception("WebSocket connection not established within timeout")
+
         # Step 1: Use SpecAgent to convert prompt to crew spec
         await manager.send_message(run_id, {
             "type": "agent-update",
