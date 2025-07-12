@@ -21,6 +21,20 @@ class SpecAgent:
         
         Given a user prompt, generate a JSON specification with the following structure:
         {
+            "agents": [
+                {
+                    "name": "researcher", 
+                    "config_key": "researcher",
+                    "tools": ["web_search_tool", "file_reader_tool"],
+                    "role_description": "Research specialist for gathering information"
+                },
+                {
+                    "name": "analyst",
+                    "config_key": "reporting_analyst", 
+                    "tools": ["data_analysis_tool", "report_generator_tool"],
+                    "role_description": "Analyzes and synthesizes research findings"
+                }
+            ],
           "tasks": [
             {
               "id": "unique_task_id",
