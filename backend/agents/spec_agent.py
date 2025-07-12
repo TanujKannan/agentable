@@ -3,6 +3,8 @@ from typing import Dict, Any
 import openai
 import os
 
+from tools.tool_registry import get_tool_names, instantiate_tool
+
 class SpecAgent:
     """
     SpecAgent converts user prompts into CrewAI task specifications
@@ -11,6 +13,7 @@ class SpecAgent:
     def __init__(self):
         # Initialize OpenAI client (or use any LLM provider)
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.tool_names = get_tool_names()
     
     async def generate_crew_spec(self, prompt: str) -> Dict[str, Any]:
         """
@@ -18,6 +21,8 @@ class SpecAgent:
         """
         system_prompt = """
         You are a SpecAgent that converts user requests into CrewAI task specifications.
+
+        You have access to the following tools: {self.tool_names}
         
         Given a user prompt, generate a JSON specification with the following structure:
         {
@@ -25,13 +30,13 @@ class SpecAgent:
                 {
                     "name": "researcher", 
                     "config_key": "researcher",
-                    "tools": ["web_search_tool", "file_reader_tool"],
+                    "tools": ["tool_name", "tool_name"],
                     "role_description": "Research specialist for gathering information"
                 },
                 {
                     "name": "analyst",
                     "config_key": "reporting_analyst", 
-                    "tools": ["data_analysis_tool", "report_generator_tool"],
+                    "tools": ["tool_name", "tool_name"],
                     "role_description": "Analyzes and synthesizes research findings"
                 }
             ],
@@ -105,7 +110,7 @@ class SpecAgent:
                     "description": f"Research and gather information about: {prompt}",
                     "expected_output": "A comprehensive list of relevant information",
                     "params": {
-                        "tool": "search",
+                        "tool": "website_search_tool",
                         "limit": 10
                     }
                 },
