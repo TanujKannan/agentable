@@ -3,8 +3,8 @@ from typing import Any
 
 
 TOOL_REGISTRY = {
-    "BrowserbaseLoadTool": BrowserbaseLoadTool,
-    "WebsiteSearchTool": WebsiteSearchTool,
+    "browserbase_load_tool": BrowserbaseLoadTool,
+    "website_search_tool": WebsiteSearchTool,
 }
 
 def instantiate_tool(tool_name: str, **kwargs) -> Any:
