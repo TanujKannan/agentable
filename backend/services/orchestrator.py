@@ -4,6 +4,8 @@ from typing import Dict, Any
 from agents.spec_agent import SpecAgent
 from crewai import Crew, Agent, Task
 
+from tools.tool_registry import instantiate_tool
+
 async def runCrew(prompt: str, run_id: str, manager):
     """
     Main orchestrator function that:
@@ -63,39 +65,40 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
     """
     agents = []
     tasks = []
+
+    # Create agents based on spec
+    for agent_spec in crew_spec.get("agents", []):
+        agent_tools = [instantiate_tool(tool_name) for tool_name in agent_spec.get("tools", [])]
     
+        agent = Agent(
+            role=agent_spec.get("name"),
+            goal=agent_spec.get("role_description"),
+            backstory=agent_spec.get("role_description"),
+            tools=agent_tools
+            verbose=True
+        )
+        agents.append(agent)
+
     # Create agents based on the spec
     for task_spec in crew_spec.get("tasks", []):
         agent_name = task_spec.get("agent")
-        
-        # Create agent if not already created
-        if not any(agent.role == agent_name for agent in agents):
-            agent = Agent(
-                role=agent_name,
-                goal=task_spec.get("description", f"Execute {agent_name} tasks"),
-                backstory=f"You are a specialized {agent_name} focused on {task_spec.get('description', 'task execution')}",
-                verbose=True
-            )
-            agents.append(agent)
-            
-            await manager.send_message(run_id, {
-                "type": "agent-update",
-                "agent": agent_name,
-                "status": "pending"
-            })
-    
-    # Create tasks based on the spec
-    for task_spec in crew_spec.get("tasks", []):
-        agent_name = task_spec.get("agent")
+
         agent = next((a for a in agents if a.role == agent_name), None)
-        
+
         if agent:
             task = Task(
                 description=task_spec.get("description", ""),
                 expected_output=task_spec.get("expected_output", "Task completion"),
                 agent=agent
             )
+
             tasks.append(task)
+
+            await manager.send_message(run_id, {
+                "type": "task-update",
+                "agent": task.description,
+                "status": "pending"
+            })
     
     # Create and return the crew
     crew = Crew(
