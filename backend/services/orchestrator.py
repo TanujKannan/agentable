@@ -17,8 +17,7 @@ async def runCrew(prompt: str, run_id: str, manager):
         # Step 1: Use SpecAgent to convert prompt to crew spec
         await manager.send_message(run_id, {
             "type": "agent-update",
-            "agent": "SpecAgent",
-            "status": "running"
+            "message": "SpecAgent started - converting prompt to crew specification"
         })
         
         spec_agent = SpecAgent()
@@ -31,8 +30,7 @@ async def runCrew(prompt: str, run_id: str, manager):
         
         await manager.send_message(run_id, {
             "type": "agent-update", 
-            "agent": "SpecAgent",
-            "status": "done"
+            "message": "SpecAgent completed - crew specification generated"
         })
         
         # Step 2: Create and execute CrewAI crew from the spec
@@ -130,9 +128,8 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
             tasks.append(task)
 
             await manager.send_message(run_id, {
-                "type": "task-update",
-                "agent": task.description,
-                "status": "pending"
+                "type": "agent-update",
+                "message": f"Task created: {task.description[:50]}..."
             })
     
     # Create and return the crew

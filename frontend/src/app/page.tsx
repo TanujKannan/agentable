@@ -65,29 +65,21 @@ export default function Home() {
   const handleWebSocketEvent = (event: WebSocketEvent) => {
     switch (event.type) {
       case 'log':
-        if (event.message) {
-          setLogs(prev => [...prev, event.message]);
-        }
+        setLogs(prev => [...prev, event.message]);
         break;
       case 'agent-update':
-        if (event.message) {
-          setLogs(prev => [...prev, `Agent Update: ${event.message}`]);
-        }
+        setLogs(prev => [...prev, `Agent Update: ${event.message}`]);
         break;
       case 'complete':
         setStatus('complete');
         if (event.result) {
           setResult(event.result);
         }
-        if (event.message) {
-          setLogs(prev => [...prev, `Complete: ${event.message}`]);
-        }
+        setLogs(prev => [...prev, `Complete: ${event.message}`]);
         break;
       case 'error':
         setStatus('error');
-        if (event.message) {
-          setLogs(prev => [...prev, `Error: ${event.message}`]);
-        }
+        setLogs(prev => [...prev, `Error: ${event.message}`]);
         break;
     }
   };
