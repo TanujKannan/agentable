@@ -291,3 +291,10 @@ public
 # Temporary folders
 tmp/
 temp/
+
+# AI assistant files
+.claude/
+
+# Database files
+db/
+backend/db/
