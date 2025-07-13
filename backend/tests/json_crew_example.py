@@ -24,27 +24,11 @@ from typing import List, Dict, Type
 
 from crewai import Agent, Crew, Task
 
-# ---------------------------------------------------------------------------
-# Import available tools here and register them so JSON can reference them by
-# name.  New tools can simply be added to this registry.
-# ---------------------------------------------------------------------------
-from crewai_tools import WebsiteSearchTool
-
-tool = WebsiteSearchTool()
-
-
-# A simple registry mapping a string identifier (as it will appear in JSON)
-# to the corresponding BaseTool **class** (not instance).  When an agent
-# definition references a tool we will instantiate it on-the-fly.
 
 TOOL_REGISTRY: Dict[str, Type] = {
-    "WebSearch": WebsiteSearchTool,
+    # "WebSearch": WebsiteSearchTool,  # Uncomment when crewai_tools is available
 }
 
-
-# ---------------------------------------------------------------------------
-# Example JSON specification – in practice this would come from your LLM.
-# ---------------------------------------------------------------------------
 OUTPUT_JSON = """
 {
   "agents": [
@@ -65,10 +49,6 @@ OUTPUT_JSON = """
 """
 
 
-# ---------------------------------------------------------------------------
-# Helper utilities
-# ---------------------------------------------------------------------------
-
 def _instantiate_tools(tool_names: List[str]):
     """Instantiate tools listed in *tool_names* using TOOL_REGISTRY."""
     tools = []
@@ -87,22 +67,17 @@ def build_crew_from_json(json_spec: str) -> Crew:
 
     data = json.loads(json_spec)
 
-    # 1. Instantiate agents ---------------------------------------------------
     agents: List[Agent] = []
 
     for agent_cfg in data["agents"]:
-        # Extract optional list of tool names (strings). Instantiate them using
-        # the TOOL_REGISTRY so the agent has live tool instances.
         tool_names = agent_cfg.pop("tools", [])
         tools = _instantiate_tools(tool_names)
 
         # Create the Agent with the resolved tools.
         agents.append(Agent(**agent_cfg, tools=tools))
 
-    # 2. Create a look-up map so tasks can reference agents by role ------------
     agent_by_role = {agent.role: agent for agent in agents}
 
-    # 3. Instantiate tasks ----------------------------------------------------
     tasks: List[Task] = []
     for task_cfg in data["tasks"]:
         tasks.append(
@@ -113,14 +88,12 @@ def build_crew_from_json(json_spec: str) -> Crew:
             )
         )
 
-    # 4. Bundle everything into a Crew ---------------------------------------
-    crew = Crew(agents=agents, tasks=tasks, verbose=True)
+    crew = Crew(agents=agents, tasks=tasks, verbose=True)  # type: ignore
     return crew
 
 
 def main():
     crew = build_crew_from_json(OUTPUT_JSON)
-    # `kickoff` returns the aggregated output of the tasks.
     result = crew.kickoff()
     print("\n=== Crew result ===")
     print(result)

@@ -37,6 +37,7 @@ next-env.d.ts
 
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -290,3 +291,10 @@ public
 # Temporary folders
 tmp/
 temp/
+
+# AI assistant files
+.claude/
+
+# Database files
+db/
+backend/db/
