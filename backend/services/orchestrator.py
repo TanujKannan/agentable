@@ -69,7 +69,7 @@ async def runCrew(prompt: str, run_id: str, manager):
         # Step 1: Use SpecAgent to convert prompt to crew spec
         await manager.send_message(run_id, {
             "type": "agent-update",
-            "message": "SpecAgent started - converting prompt to crew specification"
+            "message": "🧠 SpecAgent started - analyzing your request and creating crew specification..."
         })
         
         spec_agent = SpecAgent()
@@ -77,29 +77,67 @@ async def runCrew(prompt: str, run_id: str, manager):
         
         await manager.send_message(run_id, {
             "type": "log",
-            "message": f"Generated crew specification with {len(crew_spec.get('tasks', []))} tasks"
+            "message": f"📋 Generated crew specification with {len(crew_spec.get('agents', []))} agents and {len(crew_spec.get('tasks', []))} tasks"
         })
         
         await manager.send_message(run_id, {
             "type": "agent-update", 
-            "message": "SpecAgent completed - crew specification generated"
+            "message": "✅ SpecAgent completed - crew specification ready!"
         })
         
         # Step 2: Create and execute CrewAI crew from the spec
         crew = await create_crew_from_spec(crew_spec, run_id, manager)
         
-        # Step 3: Execute the crew with progress updates
+        # Step 3: Send pipeline initialization data (only agents with tasks)
+        agents_with_tasks = []
+        pipeline_tasks = []
+        
+        for task_idx, task in enumerate(crew.tasks):
+            agent_idx = next((i for i, agent in enumerate(crew.agents) if agent == task.agent), 0)
+            agent = crew.agents[agent_idx]
+            
+            # Only add agent if not already added
+            if not any(a["role"] == agent.role for a in agents_with_tasks):
+                agents_with_tasks.append({
+                    "id": len(agents_with_tasks), 
+                    "role": agent.role, 
+                    "status": "pending"
+                })
+            
+            # Find the agent ID in our filtered list
+            filtered_agent_id = next((i for i, a in enumerate(agents_with_tasks) if a["role"] == agent.role), 0)
+            
+            pipeline_tasks.append({
+                "id": task_idx, 
+                "description": task.description[:50] + "...", 
+                "agent_id": filtered_agent_id, 
+                "status": "pending"
+            })
+        
+        pipeline_data = {
+            "agents": agents_with_tasks,
+            "tasks": pipeline_tasks
+        }
         await manager.send_message(run_id, {
-            "type": "log",
-            "message": "Starting crew execution..."
+            "type": "pipeline-init",
+            "data": pipeline_data
         })
         
-        # Send agent status updates before execution
+        # Step 4: Execute the crew with progress updates
+        await manager.send_message(run_id, {
+            "type": "log",
+            "message": "🚀 Initializing crew execution pipeline..."
+        })
+        
+        # Send agent initialization updates
         for i, agent in enumerate(crew.agents, 1):
             await manager.send_message(run_id, {
                 "type": "agent-update",
-                "message": f"🤖 Agent {i}/{len(crew.agents)}: '{agent.role}' is ready"
+                "message": f"⚡ Agent {i}/{len(crew.agents)} initialized: '{agent.role}' ready for action",
+                "agent_id": i-1,
+                "agent_status": "ready"
             })
+            await asyncio.sleep(0.2)  # Small delay for visual effect
         
         # Execute crew in thread pool to avoid blocking
         import concurrent.futures
@@ -108,7 +146,8 @@ async def runCrew(prompt: str, run_id: str, manager):
             # Send start message
             await manager.send_message(run_id, {
                 "type": "agent-update", 
-                "message": f"🚀 Starting crew with {len(crew.agents)} agents and {len(crew.tasks)} tasks..."
+                "message": f"🚀 Starting crew with {len(crew.agents)} agents and {len(crew.tasks)} tasks...",
+                "pipeline_status": "running"
             })
             
             # Execute crew
@@ -168,21 +207,33 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
         agents.append(agent)
 
     # Create tasks with completion callbacks
-    for task_spec in crew_spec.get("tasks", []):
+    agents_with_tasks = []
+    for task_idx, task_spec in enumerate(crew_spec.get("tasks", [])):
         agent_name = task_spec.get("agent")
 
         agent = next((a for a in agents if a.role == agent_name), None)
 
         if agent:
+            # Track agents with tasks for proper ID mapping
+            if not any(a["role"] == agent.role for a in agents_with_tasks):
+                agents_with_tasks.append({"role": agent.role, "agent_obj": agent})
+            
+            # Get the filtered agent ID
+            filtered_agent_id = next((i for i, a in enumerate(agents_with_tasks) if a["role"] == agent.role), 0)
+            
             # Create task completion callback
-            def create_completion_callback(agent_role, task_desc, run_id, manager):
+            def create_completion_callback(agent_role, task_desc, task_id, agent_id, run_id, manager):
                 def callback(task_output):
                     # Schedule the async message sending
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
                     loop.run_until_complete(manager.send_message(run_id, {
                         "type": "agent-update",
-                        "message": f"✅ Agent '{agent_role}' completed: {task_desc[:50]}..."
+                        "message": f"✅ Agent '{agent_role}' completed: {task_desc[:50]}...",
+                        "agent_id": agent_id,
+                        "task_id": task_id,
+                        "agent_status": "completed",
+                        "task_status": "completed"
                     }))
                     loop.close()
                 return callback
@@ -191,14 +242,16 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
                 description=task_spec.get("description", ""),
                 expected_output=task_spec.get("expected_output", "Task completion"),
                 agent=agent,
-                callback=create_completion_callback(agent.role, task_spec.get("description", ""), run_id, manager)
+                callback=create_completion_callback(agent.role, task_spec.get("description", ""), task_idx, filtered_agent_id, run_id, manager)
             )
 
             tasks.append(task)
 
             await manager.send_message(run_id, {
                 "type": "agent-update",
-                "message": f"Task created: {task.description[:50]}..."
+                "message": f"📝 Task created: {task.description[:50]}...",
+                "task_id": task_idx,
+                "agent_id": filtered_agent_id
             })
     
     # Create and return the crew
