@@ -1,7 +1,7 @@
 // Simple API integration for Agentable backend
 // No external dependencies - uses native fetch and WebSocket
 
-export type EventType = 'agent-update' | 'log' | 'complete' | 'error';
+export type EventType = 'agent-update' | 'log' | 'complete' | 'error' | 'pipeline-init';
 
 export interface RunResponse {
   runId: string;
@@ -12,6 +12,11 @@ export interface WebSocketEvent {
   message: string;
   result?: string;
   data?: unknown;
+  agent_id?: number;
+  task_id?: number;
+  agent_status?: string;
+  task_status?: string;
+  pipeline_status?: string;
 }
 
 // Get the backend URL from environment variables

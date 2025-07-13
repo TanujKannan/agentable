@@ -95,20 +95,20 @@ async def runCrew(prompt: str, run_id: str, manager):
         })
         
         # Send agent status updates before execution
-        for agent in crew.agents:
+        for i, agent in enumerate(crew.agents, 1):
             await manager.send_message(run_id, {
                 "type": "agent-update",
-                "message": f"Agent {agent.role} is ready"
+                "message": f"🤖 Agent {i}/{len(crew.agents)}: '{agent.role}' is ready"
             })
         
         # Execute crew in thread pool to avoid blocking
         import concurrent.futures
         
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Send periodic updates during execution
+            # Send start message
             await manager.send_message(run_id, {
-                "type": "log", 
-                "message": "Crew is working on your task..."
+                "type": "agent-update", 
+                "message": f"🚀 Starting crew with {len(crew.agents)} agents and {len(crew.tasks)} tasks..."
             })
             
             # Execute crew
@@ -167,17 +167,31 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
         )
         agents.append(agent)
 
-    # Create agents based on the spec
+    # Create tasks with completion callbacks
     for task_spec in crew_spec.get("tasks", []):
         agent_name = task_spec.get("agent")
 
         agent = next((a for a in agents if a.role == agent_name), None)
 
         if agent:
+            # Create task completion callback
+            def create_completion_callback(agent_role, task_desc, run_id, manager):
+                def callback(task_output):
+                    # Schedule the async message sending
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(manager.send_message(run_id, {
+                        "type": "agent-update",
+                        "message": f"✅ Agent '{agent_role}' completed: {task_desc[:50]}..."
+                    }))
+                    loop.close()
+                return callback
+
             task = Task(
                 description=task_spec.get("description", ""),
                 expected_output=task_spec.get("expected_output", "Task completion"),
-                agent=agent
+                agent=agent,
+                callback=create_completion_callback(agent.role, task_spec.get("description", ""), run_id, manager)
             )
 
             tasks.append(task)
