@@ -2,6 +2,7 @@ import json
 from typing import Dict, Any
 import openai
 import os
+import weave
 
 from tools.tool_registry import get_tool_names, instantiate_tool
 
@@ -19,10 +20,17 @@ class SpecAgent:
             self.client = None
         self.tool_names = get_tool_names()
     
+    @weave.op()
     async def generate_crew_spec(self, prompt: str) -> Dict[str, Any]:
         """
         Takes a user prompt and converts it to a crew specification JSON
         """
+        # Add weave attributes for better tracing - disabled
+        # with weave.attributes({
+        #     'prompt_length': len(prompt),
+        #     'available_tools': self.tool_names,
+        #     'has_openai_client': self.client is not None
+        # }):
         available_tools = self.tool_names
         system_prompt = f"""
         You are a SpecAgent that converts user requests into CrewAI task specifications.
@@ -156,10 +164,12 @@ class SpecAgent:
             # Fallback to a default specification if LLM fails
             return self._get_fallback_spec(prompt)
     
+    # @weave.op()  # Disabled due to serialization issues
     def _get_fallback_spec(self, prompt: str) -> Dict[str, Any]:
         """
         Fallback specification when LLM fails
         """
+        # with weave.attributes({'fallback_reason': 'LLM_unavailable_or_failed'}):
         return {
             "agents": [
                 {
@@ -211,8 +221,13 @@ class SpecAgent:
             ]
         }
     
+    # @weave.op()  # Disabled due to serialization issues
     def _fix_tool_names(self, crew_spec: Dict[str, Any]) -> Dict[str, Any]:
         """Fix any incorrect tool names to match our registry"""
+        # with weave.attributes({
+        #     'agent_count': len(crew_spec.get('agents', [])),
+        #     'task_count': len(crew_spec.get('tasks', []))
+        # }):
         tool_mapping = {
             'search': 'serper_dev_tool',
             'web_search': 'serper_dev_tool', 
