@@ -3,7 +3,7 @@ from typing import Dict, Any
 import openai
 import os
 
-from tools.tool_registry import get_tool_names, instantiate_tool
+from tools.tool_registry import get_tool_names, get_tool_kwargs, instantiate_tool
 
 class SpecAgent:
     """
@@ -18,71 +18,94 @@ class SpecAgent:
         else:
             self.client = None
         self.tool_names = get_tool_names()
+        self.tool_kwargs = get_tool_kwargs()
     
     async def generate_crew_spec(self, prompt: str) -> Dict[str, Any]:
         """
         Takes a user prompt and converts it to a crew specification JSON
         """
         available_tools = self.tool_names
+        kwargs = self.tool_kwargs
+
+        # Build tool parameter documentation
+        tool_params_doc = ""
+        for tool_name, tool_kwargs in kwargs.items():
+            tool_params_doc += f"\n{tool_name}:\n"
+            for param_name, param_value in tool_kwargs.items():
+                if isinstance(param_value, list):
+                    tool_params_doc += f"  - {param_name}: {', '.join(param_value)}\n"
+                else:
+                    tool_params_doc += f"  - {param_name}: {param_value}\n"
+
         system_prompt = f"""
         You are a SpecAgent that converts user requests into CrewAI task specifications.
 
-        You only have access to the following tools: {available_tools}
+        AVAILABLE TOOLS: {available_tools}
+
+        TOOL PARAMETERS:
+        {tool_params_doc}
+
+        IMPORTANT RULES:
+        1. Use ONLY the exact tool names from the available tools list above
+        2. For each tool you use, include the appropriate parameters from the tool parameters section
+        3. Do not use generic names like 'search' or 'llm' - use the specific tool names
+
+        You have complete flexibility to create as many agents and tasks as needed to accomplish the user's request. 
+        Think like a project manager - break down complex requests into logical steps and assign specialized agents.
         
-        IMPORTANT: You must use the EXACT tool names from the list above. Do not use generic names like 'search' or 'llm'.
-        
-        Tool Usage Guidelines:
-        - Use "serper_dev_tool" for web search and research
-        - Use "website_search_tool" for website content search
-        - Use "code_docs_search_tool" for code documentation search
-        - Use "dalle_tool" for image generation tasks
-        
-        Given a user prompt, generate a JSON specification with the following structure:
+        Generate a JSON specification with this structure:
         {{
             "agents": [
                 {{
-                    "name": "researcher", 
-                    "config_key": "researcher",
-                    "tools": ["serper_dev_tool", "website_search_tool"],
-                    "role_description": "Research specialist for gathering information"
-                }},
-                {{
-                    "name": "image_creator",
-                    "config_key": "image_creator",
-                    "tools": ["dalle_tool"],
-                    "role_description": "Creates images from textual descriptions using DALL-E"
-                }},
-                {{
-                    "name": "analyst",
-                    "config_key": "reporting_analyst", 
-                    "tools": [],
-                    "role_description": "Analyzes and synthesizes research findings"
+                    "name": "agent_name",
+                    "tools": ["tool_name"],
+                    "role_description": "Detailed description of what this agent specializes in"
                 }}
             ],
-          "tasks": [
-            {{
-              "id": "unique_task_id",
-              "agent": "agent_name",
-              "description": "Clear task description with variables like {{prompt}}",
-              "expected_output": "What the task should produce",
-              "params": {{
-                "tool": "serper_dev_tool",
-                "limit": 50,
-                "method": "search",
-                "model": "n/a"
-              }}
-            }}
-          ]
+            "tasks": [
+                {{
+                    "name": "unique_task_name",
+                    "agent": "agent_name",
+                    "description": "Clear task description",
+                    "expected_output": "What the task should produce",
+                    "tool_params": [
+                        {{
+                            "tool": "tool_name",
+                            "param1": "value1",
+                            "param2": "value2"
+                        }}
+                    ]
+                }}
+            ]
         }}
         
-        Common agent types:
-        - DataAgent: For fetching/searching data
-        - AnalysisAgent: For analyzing data (sentiment, summarization, etc.)
-        - ResearchAgent: For research tasks
-        - WritingAgent: For content generation
-        - ImageAgent: For image generation using DALL-E
+        HOW CREWAI TOOLS WORK:
+        - CrewAI calls the tool's _run method with ALL parameters as keyword arguments
+        - The first parameter is typically the action/operation (like "send_message" for slack_tool)
+        - Additional parameters are passed as kwargs to the _run method
+        - Example: slack_tool._run(action="send_message", channel="#general", message="Hello")
         
-        Always include relevant parameters in the params object.
+        TOOL PARAMETER EXAMPLES:
+        - slack_tool: {{"tool": "slack_tool", "action": "send_message", "channel": "#general", "message": "Your message here"}}
+        - serper_dev_tool: {{"tool": "serper_dev_tool", "query": "search query", "limit": 10}}
+        
+        CRITICAL: Generate ACTUAL parameter values based on the user's request. NEVER use placeholders like "Your message here", "selected_channel", "#selected_channel", or any generic terms. Use real, specific values that make sense for the specific task. 
+        
+        For Slack channels, ALWAYS use real channel names like "#general", "#announcements", "#random", "#help", "#team", "#project", etc. If you don't know the exact channel, use "#general" as it's the most common default channel.
+        
+        For messages, write the actual message content that should be sent, not placeholder text.
+        
+        EXAMPLES OF GOOD vs BAD:
+        ❌ BAD: "channel": "selected_channel", "message": "Your message here"
+        ❌ BAD: "channel": "#selected_channel", "message": "Your message here"  
+        ✅ GOOD: "channel": "#general", "message": "Let's schedule a meeting on July 12. Please confirm availability."
+        
+        Agent Specialization Guidelines:
+        - Create specialized agents for different domains (research, analysis, writing, coding, presentation creation, etc.)
+        - Consider agent expertise and tool compatibility
+        - Use descriptive names that indicate the agent's role
+        
+        When using tools, always include the required parameters in tool_params based on the tool parameters documentation above.
         Respond with valid JSON only.
         """
         
@@ -101,9 +124,11 @@ class SpecAgent:
             )
             
             content = response.choices[0].message.content
+            if content is None:
+                return self._get_fallback_spec(prompt)
             crew_spec = json.loads(content)
 
-            print('CREW SPEC', crew_spec)
+            print('CREW SPEC', content)
             print('========================================')
             
             # Validate the structure
@@ -134,39 +159,20 @@ class SpecAgent:
                     "tools": ["serper_dev_tool"],
                     "role_description": "Research specialist for gathering information"
                 },
-                {
-                    "name": "image_creator",
-                    "config_key": "image_creator",
-                    "tools": ["dalle_tool"],
-                    "role_description": "Creates images from textual descriptions using DALL-E"
-                },
-                {
-                    "name": "analyst",
-                    "config_key": "analyst",
-                    "tools": [],
-                    "role_description": "Analyzes and synthesizes research findings"
-                }
             ],
             "tasks": [
                 {
-                    "id": "researchTask",
+                    "name": "researchTask",
                     "agent": "researcher",
                     "description": f"Research and gather information about: {prompt}",
                     "expected_output": "A comprehensive list of relevant information",
-                    "params": {
-                        "tool": "serper_dev_tool",
-                        "limit": 10
-                    }
-                },
-                {
-                    "id": "analysisTask", 
-                    "agent": "analyst",
-                    "description": f"Analyze the research findings for: {prompt}",
-                    "expected_output": "A detailed analysis and summary",
-                    "params": {
-                        "method": "summarize",
-                        "model": "gpt-3.5-turbo"
-                    }
+                    "tool_params": [
+                        {
+                            "tool": "serper_dev_tool",
+                            "query": f"information about {prompt}",
+                            "limit": 10
+                        }
+                    ]
                 }
             ]
         }
@@ -185,6 +191,10 @@ class SpecAgent:
             'dall-e': 'dalle_tool',
             'generate_image': 'dalle_tool',
             'create_image': 'dalle_tool',
+            'slides': 'google_slides_tool',
+            'presentation': 'google_slides_tool',
+            'google_slides': 'google_slides_tool',
+            'powerpoint': 'google_slides_tool',
         }
         
         # Fix agent tool names

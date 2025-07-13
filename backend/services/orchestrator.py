@@ -5,6 +5,7 @@ from agents.spec_agent import SpecAgent
 from crewai import Crew, Agent, Task
 
 from tools.tool_registry import instantiate_tool
+from tools.parameterized_tool import create_parameterized_tool
 
 async def runCrew(prompt: str, run_id: str, manager):
     """
@@ -110,6 +111,7 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
 
     # Create agents based on spec
     for agent_spec in crew_spec.get("agents", []):
+        agent_tools = []
         agent_tools = [instantiate_tool(tool_name) for tool_name in agent_spec.get("tools", [])]
     
         agent = Agent(
@@ -121,17 +123,40 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
         )
         agents.append(agent)
 
-    # Create agents based on the spec
+    # Create tasks based on the spec
     for task_spec in crew_spec.get("tasks", []):
         agent_name = task_spec.get("agent")
-
         agent = next((a for a in agents if a.role == agent_name), None)
 
         if agent:
+            # Get tool parameters for this task
+            tool_params = task_spec.get("tool_params", [])
+            
+            # Create parameterized tools for this specific task
+            task_specific_tools = []
+            for param_set in tool_params:
+                tool_name = param_set.get("tool")
+                if tool_name:
+                    # Remove the "tool" key and use the rest as parameters
+                    tool_kwargs = {k: v for k, v in param_set.items() if k != "tool"}
+                    
+                    # Always create a parameterized version of the tool
+                    parameterized_tool = create_parameterized_tool(tool_name, tool_kwargs)
+                    task_specific_tools.append(parameterized_tool)
+            
+            # Create a task-specific agent with the parameterized tools
+            task_agent = Agent(
+                role=agent.role,
+                goal=agent.goal,
+                backstory=agent.backstory,
+                tools=task_specific_tools,  # Use the parameterized tools
+                verbose=True
+            )
+
             task = Task(
                 description=task_spec.get("description", ""),
                 expected_output=task_spec.get("expected_output", "Task completion"),
-                agent=agent
+                agent=task_agent
             )
 
             tasks.append(task)
