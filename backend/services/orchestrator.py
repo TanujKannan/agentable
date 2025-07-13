@@ -80,6 +80,38 @@ async def runCrew(prompt: str, run_id: str, manager):
             "message": f"📋 Generated crew specification with {len(crew_spec.get('agents', []))} agents and {len(crew_spec.get('tasks', []))} tasks"
         })
         
+        # Log which tools are available for each agent with visual indicators
+        for agent_spec in crew_spec.get('agents', []):
+            agent_name = agent_spec.get('name')
+            tools = agent_spec.get('tools', [])
+            if tools:
+                # Add visual indicators for different tool types
+                tool_indicators = []
+                for tool in tools:
+                    if tool == 'browserbase_tool':
+                        tool_indicators.append('🌐 browserbase_tool')
+                    elif tool == 'serper_dev_tool':
+                        tool_indicators.append('🔍 serper_dev_tool')
+                    elif tool == 'dalle_tool':
+                        tool_indicators.append('🎨 dalle_tool')
+                    elif tool == 'website_search_tool':
+                        tool_indicators.append('🔗 website_search_tool')
+                    elif tool == 'code_docs_search_tool':
+                        tool_indicators.append('📚 code_docs_search_tool')
+                    else:
+                        tool_indicators.append(f'🔧 {tool}')
+                
+                tool_list = ', '.join(tool_indicators)
+                await manager.send_message(run_id, {
+                    "type": "log",
+                    "message": f"🤖 Agent '{agent_name}' equipped with: {tool_list}"
+                })
+            else:
+                await manager.send_message(run_id, {
+                    "type": "log",
+                    "message": f"🤖 Agent '{agent_name}' has no tools (analysis/reasoning only)"
+                })
+        
         await manager.send_message(run_id, {
             "type": "agent-update", 
             "message": "✅ SpecAgent completed - crew specification ready!"
@@ -196,6 +228,13 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
     # Create agents based on spec
     for agent_spec in crew_spec.get("agents", []):
         agent_tools = [instantiate_tool(tool_name) for tool_name in agent_spec.get("tools", [])]
+        
+        # Log which tools the agent is using
+        tool_names = agent_spec.get("tools", [])
+        await manager.send_message(run_id, {
+            "type": "log",
+            "message": f"🛠️ Agent '{agent_spec.get('name')}' configured with tools: {', '.join(tool_names)}"
+        })
     
         agent = Agent(
             role=agent_spec.get("name"),
@@ -249,7 +288,7 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
 
             await manager.send_message(run_id, {
                 "type": "agent-update",
-                "message": f"📝 Task created: {task.description[:50]}...",
+                "message": f"📝 Task created: {task.description[:50]}... (Agent: {agent.role})",
                 "task_id": task_idx,
                 "agent_id": filtered_agent_id
             })
