@@ -1,6 +1,8 @@
 name: Deploy Backend to Fly.io
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
       - main
