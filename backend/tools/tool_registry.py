@@ -1,4 +1,4 @@
-from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, BrowserbaseLoadTool
+from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, BrowserbaseLoadTool, EXASearchTool
 from typing import Any
 import os
 
@@ -17,6 +17,7 @@ TOOL_REGISTRY = {
     "code_docs_search_tool": CodeDocsSearchTool,
     "dalle_tool": create_dalle_tool,  # Add DallE tool
     "browserbase_tool": BrowserbaseLoadTool,  # Add Browserbase navigation tool
+    "exa_search_tool": EXASearchTool,  # Add EXA semantic search tool
 }
 
 def instantiate_tool(tool_name: str, **kwargs) -> Any:
@@ -31,6 +32,10 @@ def instantiate_tool(tool_name: str, **kwargs) -> Any:
     
     # Handle browserbase tool - instantiate normally
     if tool_name == "browserbase_tool":
+        return tool_class(**kwargs)
+    
+    # Handle EXA search tool - instantiate normally
+    if tool_name == "exa_search_tool":
         return tool_class(**kwargs)
     
     return tool_class(**kwargs)

@@ -45,6 +45,7 @@ class SpecAgent:
         - Use "code_docs_search_tool" for code documentation search
         - Use "dalle_tool" for image generation tasks
         - Use "browserbase_tool" for web navigation and interaction (when user wants to browse a specific website, navigate through pages, or interact with complex web applications)
+        - Use "exa_search_tool" for semantic search across the internet (when you need high-quality, contextually relevant results that understand the meaning behind the query)
         
         CRITICAL: When to use Browserbase vs Regular Search:
         
@@ -58,11 +59,24 @@ class SpecAgent:
         - User wants to extract content from dynamically loaded pages
         
         DO NOT USE BROWSERBASE TOOLS for:
-        - Simple searches for information (use serper_dev_tool)
-        - General research questions (use serper_dev_tool)
-        - Finding facts, definitions, or explanations (use serper_dev_tool)
-        - Basic information gathering (use serper_dev_tool)
-        - When user just wants to know "what is..." or "how to..." (use serper_dev_tool)
+        - Simple searches for information (use serper_dev_tool or exa_search_tool)
+        - General research questions (use serper_dev_tool or exa_search_tool)
+        - Finding facts, definitions, or explanations (use serper_dev_tool or exa_search_tool)
+        - Basic information gathering (use serper_dev_tool or exa_search_tool)
+        - When user just wants to know "what is..." or "how to..." (use serper_dev_tool or exa_search_tool)
+        
+        WHEN TO USE EXA SEARCH TOOL:
+        - Use "exa_search_tool" when you need semantic, contextually-aware search results
+        - Best for research that requires understanding the meaning and context behind queries
+        - Ideal for finding high-quality, relevant content that matches the intent of the search
+        - Use when you need more sophisticated search capabilities than basic keyword matching
+        - Perfect for academic research, technical documentation, or when search quality is crucial
+        - Use when "serper_dev_tool" might return too many irrelevant results
+        
+        PREFERENCE ORDER FOR SEARCH TOOLS:
+        1. Use "exa_search_tool" for high-quality, semantic search when search quality is important
+        2. Use "serper_dev_tool" for general web search and when you need comprehensive results
+        3. Use "website_search_tool" for searching within specific website content
         
         CRITICAL TOOL USAGE: For image generation tasks using dalle_tool:
         - The parameter name MUST be 'image_description' (NOT 'description')
@@ -78,8 +92,14 @@ class SpecAgent:
                 {{
                     "name": "researcher", 
                     "config_key": "researcher",
-                    "tools": ["serper_dev_tool", "website_search_tool"],
-                    "role_description": "Research specialist for gathering information"
+                    "tools": ["exa_search_tool", "serper_dev_tool", "website_search_tool"],
+                    "role_description": "Research specialist for gathering high-quality, contextually relevant information using semantic search"
+                }},
+                {{
+                    "name": "semantic_researcher",
+                    "config_key": "semantic_researcher",
+                    "tools": ["exa_search_tool"],
+                    "role_description": "Semantic search specialist for finding high-quality, contextually relevant content across the internet using advanced search capabilities"
                 }},
                 {{
                     "name": "web_navigator",
@@ -119,7 +139,8 @@ class SpecAgent:
         Common agent types:
         - DataAgent: For fetching/searching data
         - AnalysisAgent: For analyzing data (sentiment, summarization, etc.)
-        - ResearchAgent: For research tasks
+        - ResearchAgent: For research tasks using traditional search
+        - SemanticResearchAgent: For high-quality research using semantic search (EXA)
         - WritingAgent: For content generation
         - ImageAgent: For image generation using DALL-E
         - WebNavigationAgent: For browsing websites and interacting with web applications
@@ -175,8 +196,8 @@ class SpecAgent:
                 {
                     "name": "researcher",
                     "config_key": "researcher", 
-                    "tools": ["serper_dev_tool"],
-                    "role_description": "Research specialist for gathering information"
+                    "tools": ["exa_search_tool", "serper_dev_tool"],
+                    "role_description": "Research specialist for gathering high-quality, contextually relevant information"
                 },
                 {
                     "name": "web_navigator",
@@ -204,7 +225,7 @@ class SpecAgent:
                     "description": f"Research and gather information about: {prompt}",
                     "expected_output": "A comprehensive list of relevant information",
                     "params": {
-                        "tool": "serper_dev_tool",
+                        "tool": "exa_search_tool",
                         "limit": 10
                     }
                 },
@@ -229,8 +250,15 @@ class SpecAgent:
         #     'task_count': len(crew_spec.get('tasks', []))
         # }):
         tool_mapping = {
-            'search': 'serper_dev_tool',
-            'web_search': 'serper_dev_tool', 
+            'search': 'exa_search_tool',  # Default to EXA for better search quality
+            'web_search': 'exa_search_tool', 
+            'semantic_search': 'exa_search_tool',
+            'exa': 'exa_search_tool',
+            'research': 'exa_search_tool',
+            'find': 'exa_search_tool',
+            'lookup': 'exa_search_tool',
+            'serper': 'serper_dev_tool',
+            'google_search': 'serper_dev_tool',
             'llm': 'website_search_tool',
             'sentiment': 'website_search_tool',
             'summarize': 'website_search_tool',
