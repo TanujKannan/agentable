@@ -167,7 +167,7 @@ class SpecAgent:
                 
             print("Making OpenAI API call...")
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo-0125",
+                model="gpt-4o-2024-08-06",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Convert this prompt to a crew specification: {prompt}"}
@@ -261,7 +261,7 @@ class SpecAgent:
                     "expected_output": "A detailed analysis and summary",
                     "params": {
                         "method": "summarize",
-                        "model": "gpt-3.5-turbo"
+                        "model": "o4-mini-2025-04-16"
                     }
                 }
             ]

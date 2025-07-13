@@ -1,6 +1,7 @@
 from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, BrowserbaseLoadTool, EXASearchTool
 from typing import Any
 import os
+from .browserbase_wrapper import BrowserbaseWrapper
 
 # Configure DallE tool with dall-e-3 model
 def create_dalle_tool():
@@ -11,7 +12,7 @@ def create_dalle_tool():
         n=1                    # Generate 1 image (dall-e-3 only supports n=1)
     )
 
-# Configure Browserbase tool with API credentials
+# Configure Browserbase tool with API credentials and content filtering
 def create_browserbase_tool():
     api_key = os.getenv("BROWSERBASE_API_KEY")
     project_id = os.getenv("BROWSERBASE_PROJECT_ID")
@@ -22,9 +23,10 @@ def create_browserbase_tool():
             "Get your credentials from https://browserbase.com/"
         )
     
-    return BrowserbaseLoadTool(
+    return BrowserbaseWrapper(
         api_key=api_key,
-        project_id=project_id
+        project_id=project_id,
+        max_tokens=150000  # Safe limit under 200K TPM
     )
 
 TOOL_REGISTRY = {
@@ -48,7 +50,7 @@ def instantiate_tool(tool_name: str, **kwargs) -> Any:
     
     # Handle browserbase tool specially since it's a function
     if tool_name == "browserbase_tool":
-        return tool_class(**kwargs)
+        return create_browserbase_tool()
     
     # Handle EXA search tool - instantiate normally
     if tool_name == "exa_search_tool":
