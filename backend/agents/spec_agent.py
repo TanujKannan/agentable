@@ -3,6 +3,7 @@ from typing import Dict, Any
 import openai
 import os
 import weave
+import weave
 
 from tools.tool_registry import get_tool_names, get_tool_kwargs, instantiate_tool
 
@@ -21,6 +22,7 @@ class SpecAgent:
         self.tool_names = get_tool_names()
         self.tool_kwargs = get_tool_kwargs()
     
+    @weave.op()
     @weave.op()
     async def generate_crew_spec(self, prompt: str) -> Dict[str, Any]:
         """
@@ -54,11 +56,15 @@ class SpecAgent:
         
         Tool Usage Guidelines:
         - Use "serper_dev_tool" for web search and research (general searches, finding information)
+        - Use "serper_dev_tool" for web search and research (general searches, finding information)
         - Use "website_search_tool" for website content search
         - Use "code_docs_search_tool" for code documentation search
         - Use "dalle_tool" for image generation tasks
         - Use "browserbase_tool" for web navigation and interaction (when user wants to browse a specific website, navigate through pages, or interact with complex web applications)
+        - Use "exa_search_tool" for semantic search across the internet (when you need high-quality, contextually relevant results that understand the meaning behind the query)
         
+        - You can use serper_dev_tool to find the URL of the website to browse, then use browserbase_tool to browse the website.
+
         CRITICAL: When to use Browserbase vs Regular Search:
         
         USE BROWSERBASE TOOLS when:
@@ -71,11 +77,32 @@ class SpecAgent:
         - User wants to extract content from dynamically loaded pages
         
         DO NOT USE BROWSERBASE TOOLS for:
+        - Simple searches for information (use serper_dev_tool or exa_search_tool)
+        - General research questions (use serper_dev_tool or exa_search_tool)
+        - Finding facts, definitions, or explanations (use serper_dev_tool or exa_search_tool)
+        - Basic information gathering (use serper_dev_tool or exa_search_tool)
+        - When user just wants to know "what is..." or "how to..." (use serper_dev_tool or exa_search_tool)
+        
+        WHEN TO USE EXA SEARCH TOOL:
+        - Use "exa_search_tool" when you need semantic, contextually-aware search results
+        - Best for research that requires understanding the meaning and context behind queries
+        - Ideal for finding high-quality, relevant content that matches the intent of the search
+        - Use when you need more sophisticated search capabilities than basic keyword matching
+        - Perfect for academic research, technical documentation, or when search quality is crucial
+        - Use when "serper_dev_tool" might return too many irrelevant results
+        
+        PREFERENCE ORDER FOR SEARCH TOOLS:
+        1. Use "exa_search_tool" for high-quality, semantic search when search quality is important
+        2. Use "serper_dev_tool" for general web search and when you need comprehensive results
+        3. Use "website_search_tool" for searching within specific website content
         - Simple searches for information (use serper_dev_tool)
         - General research questions (use serper_dev_tool)
         - Finding facts, definitions, or explanations (use serper_dev_tool)
         - Basic information gathering (use serper_dev_tool)
         - When user just wants to know "what is..." or "how to..." (use serper_dev_tool)
+        - Large e-commerce sites that may return massive HTML content (prefer serper_dev_tool for product information)
+        
+        IMPORTANT: When using browserbase_tool, be specific about the target URL and avoid generic browsing tasks that might result in large HTML pages. Focus on targeted content extraction rather than general website browsing.
         
         CRITICAL TOOL USAGE: For image generation tasks using dalle_tool:
         - The parameter name MUST be 'image_description' (NOT 'description')
@@ -84,17 +111,39 @@ class SpecAgent:
         - WRONG format: Do NOT pass dictionary objects to the tool
         
         Example of correct usage: dalle_tool(image_description="A monkey hanging from a tree branch")
-
-        You have complete flexibility to create as many agents and tasks as needed to accomplish the user's request. 
-        Think like a project manager - break down complex requests into logical steps and assign specialized agents.
         
         Given a user prompt, generate a JSON specification with the following structure:
         {{
             "agents": [
                 {{
-                    "name": "agent_name",
-                    "tools": ["tool_name"],
-                    "role_description": "Detailed description of what this agent specializes in"
+                    "name": "researcher", 
+                    "config_key": "researcher",
+                    "tools": ["exa_search_tool", "serper_dev_tool", "website_search_tool"],
+                    "role_description": "Research specialist for gathering high-quality, contextually relevant information using semantic search"
+                }},
+                {{
+                    "name": "semantic_researcher",
+                    "config_key": "semantic_researcher",
+                    "tools": ["exa_search_tool"],
+                    "role_description": "Semantic search specialist for finding high-quality, contextually relevant content across the internet using advanced search capabilities"
+                }},
+                {{
+                    "name": "web_navigator",
+                    "config_key": "web_navigator",
+                    "tools": ["browserbase_tool"],
+                    "role_description": "Web navigation specialist for browsing websites, interacting with web applications, and extracting content from complex pages that require JavaScript rendering"
+                }},
+                {{
+                    "name": "image_creator",
+                    "config_key": "image_creator",
+                    "tools": ["dalle_tool"],
+                    "role_description": "Creates images from textual descriptions using DALL-E. CRITICAL: Call dalle_tool with direct string parameter: dalle_tool(image_description='description text'). Do NOT pass dictionaries or objects."
+                }},
+                {{
+                    "name": "analyst",
+                    "config_key": "reporting_analyst", 
+                    "tools": [],
+                    "role_description": "Analyzes and synthesizes research findings"
                 }}
             ],
             "tasks": [
@@ -157,20 +206,30 @@ class SpecAgent:
         try:
             # Use fallback if no OpenAI client
             if not self.client:
+                print('NO OPENAI CLIENT')
                 return self._get_fallback_spec(prompt)
                 
+            print("Making OpenAI API call...")
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Convert this prompt to a crew specification: {prompt}"}
                 ],
-                temperature=0.1
             )
             
             content = response.choices[0].message.content
-            if content is None:
-                return self._get_fallback_spec(prompt)
+            print(f"Raw API response: {content}")
+            
+            if content.startswith('```json'):
+                content = content[7:] 
+            if content.startswith('```'):
+                content = content[3:]  
+            if content.endswith('```'):
+                content = content[:-3]  
+            content = content.strip()
+            
+            print(f"Cleaned content: {content}")
             crew_spec = json.loads(content)
 
             print('CREW SPEC', content)
@@ -186,26 +245,49 @@ class SpecAgent:
             return crew_spec
             
         except json.JSONDecodeError as e:
+            print(f"JSON DECODE ERROR: {e}")
+            print(f"Raw content: {content}")
             # Fallback to a default specification if LLM fails
             return self._get_fallback_spec(prompt)
         except Exception as e:
+            print(f"GENERAL EXCEPTION: {e}")
             # Fallback to a default specification if LLM fails
             return self._get_fallback_spec(prompt)
     
+    # @weave.op()  # Disabled due to serialization issues
     # @weave.op()  # Disabled due to serialization issues
     def _get_fallback_spec(self, prompt: str) -> Dict[str, Any]:
         """
         Fallback specification when LLM fails
         """
         # with weave.attributes({'fallback_reason': 'LLM_unavailable_or_failed'}):
+        # with weave.attributes({'fallback_reason': 'LLM_unavailable_or_failed'}):
         return {
             "agents": [
                 {
                     "name": "researcher",
                     "config_key": "researcher", 
-                    "tools": ["serper_dev_tool"],
-                    "role_description": "Research specialist for gathering information"
+                    "tools": ["exa_search_tool", "serper_dev_tool"],
+                    "role_description": "Research specialist for gathering high-quality, contextually relevant information"
                 },
+                {
+                    "name": "web_navigator",
+                    "config_key": "web_navigator",
+                    "tools": ["browserbase_tool"],
+                    "role_description": "Web navigation specialist for browsing specific websites, interacting with web applications, and extracting targeted content from pages that require JavaScript rendering. Focuses on targeted content extraction rather than general website browsing to avoid context length issues."
+                },
+                {
+                    "name": "image_creator",
+                    "config_key": "image_creator",
+                    "tools": ["dalle_tool"],
+                    "role_description": "Creates images from textual descriptions using DALL-E. CRITICAL: Call dalle_tool with direct string parameter: dalle_tool(image_description='description text'). Do NOT pass dictionaries or objects."
+                },
+                {
+                    "name": "analyst",
+                    "config_key": "analyst",
+                    "tools": [],
+                    "role_description": "Analyzes and synthesizes research findings"
+                }
             ],
             "tasks": [
                 {
@@ -231,6 +313,7 @@ class SpecAgent:
             ]
         }
     
+    # @weave.op()  # Disabled due to serialization issues
     def _fix_tool_names(self, crew_spec: Dict[str, Any]) -> Dict[str, Any]:
         """Fix any incorrect tool names to match our registry"""
         # with weave.attributes({
@@ -238,8 +321,15 @@ class SpecAgent:
         #     'task_count': len(crew_spec.get('tasks', []))
         # }):
         tool_mapping = {
-            'search': 'serper_dev_tool',
-            'web_search': 'serper_dev_tool', 
+            'search': 'exa_search_tool',  # Default to EXA for better search quality
+            'web_search': 'exa_search_tool', 
+            'semantic_search': 'exa_search_tool',
+            'exa': 'exa_search_tool',
+            'research': 'exa_search_tool',
+            'find': 'exa_search_tool',
+            'lookup': 'exa_search_tool',
+            'serper': 'serper_dev_tool',
+            'google_search': 'serper_dev_tool',
             'llm': 'website_search_tool',
             'sentiment': 'website_search_tool',
             'summarize': 'website_search_tool',
@@ -254,6 +344,16 @@ class SpecAgent:
             'google_slides': 'google_slides_tool',
             'powerpoint': 'google_slides_tool',
             # Remove incorrect Slack mappings - let the individual tools be used as-is
+            'browser': 'browserbase_tool',
+            'browse': 'browserbase_tool',
+            'navigate': 'browserbase_tool',
+            'browserbase': 'browserbase_tool',
+            'web_navigation': 'browserbase_tool',
+            'web_browse': 'browserbase_tool',
+            'click': 'browserbase_tool',
+            'interact': 'browserbase_tool',
+            'form_fill': 'browserbase_tool',
+            'screenshot': 'browserbase_tool',
             'browser': 'browserbase_tool',
             'browse': 'browserbase_tool',
             'navigate': 'browserbase_tool',

@@ -16,7 +16,7 @@ Agentable is a full-stack application that transforms natural language prompts i
 - **🤖 Dynamic Agent Creation**: Converts prompts into structured CrewAI agent specifications
 - **⚡ Real-time Execution**: Live WebSocket updates of agent status and progress
 - **🌐 Web Browser Automation**: Integrated Browserbase for web scraping and interaction
-- **🔍 Advanced Search**: Serper API integration for comprehensive web research
+- **🔍 Advanced Search**: Multiple search engines including Serper API and EXA semantic search
 - **📊 Modern UI**: Clean, responsive interface built with Next.js and Tailwind CSS
 - **🔧 Tool Ecosystem**: Extensible tool registry for adding new agent capabilities
 
@@ -43,6 +43,8 @@ agentable/
 - **OpenAI GPT** - LLM for prompt-to-specification conversion
 - **Browserbase** - Browser automation and web scraping
 - **Serper** - Web search API integration
+- **EXA** - Semantic search for high-quality research
+- **DALL-E** - AI image generation capabilities
 - **WebSockets** - Real-time communication
 
 **Frontend:**
@@ -58,7 +60,7 @@ agentable/
 
 - **Python 3.8+** - Backend runtime
 - **Node.js 18+** - Frontend development
-- **API Keys** - OpenAI, Browserbase, Serper accounts
+- **API Keys** - OpenAI, Browserbase, Serper, EXA accounts
 
 ### 1. Backend Setup
 
@@ -69,12 +71,13 @@ cd backend
 pip install -r requirements.txt
 
 # Configure environment variables
-cp .env.sample .env
+cp env.template .env
 # Edit .env with your API keys:
 # OPENAI_API_KEY=your_openai_key_here
 # BROWSERBASE_API_KEY=your_browserbase_key_here
 # BROWSERBASE_PROJECT_ID=your_project_id_here
 # SERPER_API_KEY=your_serper_key_here
+# EXA_API_KEY=your_exa_key_here
 
 # Start the development server
 uvicorn main:app --reload --port 8000
@@ -99,7 +102,7 @@ The frontend will be available at `http://localhost:3000`
 ### 3. Test the Integration
 
 1. Open `http://localhost:3000` in your browser
-2. Enter a test prompt: `"Open google.com and get the page title"`
+2. Enter a test prompt: `"Research why Felix Lebrun is the best table tennis player"`
 3. Click "Create AI Crew" and watch real-time execution
 
 ## 📋 API Reference
@@ -112,7 +115,7 @@ Start a new agent crew execution.
 **Request:**
 ```json
 {
-  "prompt": "Research the latest AI trends and create a summary report"
+  "prompt": "Research the latest AI trends using semantic search and create a summary report"
 }
 ```
 
@@ -160,6 +163,9 @@ BROWSERBASE_PROJECT_ID=1841f00d-...
 # Web Search
 SERPER_API_KEY=97f540382...
 
+# Semantic Search
+EXA_API_KEY=your_exa_key_here
+
 # Optional: Other LLM providers
 ANTHROPIC_API_KEY=sk-ant-...
 COHERE_API_KEY=...
@@ -177,9 +183,12 @@ The system supports multiple AI tools through the tool registry:
 ```python
 # backend/tools/tool_registry.py
 TOOL_REGISTRY = {
-    "browserbase_load_tool": BrowserbaseLoadTool,
+    "browserbase_tool": BrowserbaseLoadTool,
     "website_search_tool": WebsiteSearchTool, 
     "serper_dev_tool": SerperDevTool,
+    "exa_search_tool": EXASearchTool,
+    "dalle_tool": create_dalle_tool,
+    "code_docs_search_tool": CodeDocsSearchTool,
 }
 ```
 
@@ -188,6 +197,18 @@ TOOL_REGISTRY = {
 ### Simple Web Research
 ```
 "Find the current stock price of Tesla and summarize recent news about the company"
+```
+
+### Semantic Search & Research
+```
+"Find high-quality research papers about machine learning interpretability"
+"Conduct semantic search for recent developments in quantum computing"
+```
+
+### Image Generation
+```
+"Create an image of a futuristic city at sunset"
+"Generate a logo for a tech startup"
 ```
 
 ### Data Collection & Analysis
@@ -210,7 +231,9 @@ TOOL_REGISTRY = {
 The system automatically creates specialized agents based on task requirements:
 
 - **🔍 Research Agent** - Web search, data gathering, fact-checking
+- **🧠 Semantic Research Agent** - High-quality semantic search using EXA
 - **🌐 Browser Agent** - Web automation, form filling, navigation
+- **🎨 Image Creation Agent** - AI image generation using DALL-E
 - **📊 Analysis Agent** - Data processing, pattern recognition, summarization
 - **✍️ Writing Agent** - Content generation, report creation, documentation
 - **🧠 Coordination Agent** - Task delegation, workflow management
@@ -365,7 +388,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **CrewAI** - Multi-agent orchestration framework
 - **Browserbase** - Browser automation platform
-- **OpenAI** - Language model services
+- **OpenAI** - Language model and image generation services
+- **EXA** - High-quality semantic search platform
 - **FastAPI** - High-performance web framework
 - **Next.js** - React production framework
 - **shadcn/ui** - Beautiful component library

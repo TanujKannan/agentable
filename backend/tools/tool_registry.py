@@ -1,4 +1,4 @@
-from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, ZapierActionTools, BrowserbaseLoadTool
+from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, BrowserbaseLoadTool, EXASearchTool, ZapierActionTools, BrowserbaseLoadTool
 from tools.google_slides_tool import GoogleSlidesTool
 from tools.slack_resolve_channel_tool import SlackResolveChannelTool
 from tools.slack_list_channels_tool import SlackListChannelsTool
@@ -13,6 +13,22 @@ def create_dalle_tool():
         size="1024x1024",      # Standard size for dall-e-3
         quality="standard",    # Use standard quality to keep costs lower
         n=1                    # Generate 1 image (dall-e-3 only supports n=1)
+    )
+
+# Configure Browserbase tool with API credentials
+def create_browserbase_tool():
+    api_key = os.getenv("BROWSERBASE_API_KEY")
+    project_id = os.getenv("BROWSERBASE_PROJECT_ID")
+    
+    if not api_key or not project_id:
+        raise ValueError(
+            "Browserbase credentials not configured. Please set BROWSERBASE_API_KEY and BROWSERBASE_PROJECT_ID environment variables. "
+            "Get your credentials from https://browserbase.com/"
+        )
+    
+    return BrowserbaseLoadTool(
+        api_key=api_key,
+        project_id=project_id
     )
 
 TOOL_REGISTRY = {
@@ -50,6 +66,12 @@ KWARGS_REGISTRY = {
 }
 
 def instantiate_tool(tool_name: str, context=None, **kwargs) -> Any:
+    "dalle_tool": create_dalle_tool,  # Add DallE tool
+    "browserbase_tool": BrowserbaseLoadTool,  # Add Browserbase navigation tool
+    "exa_search_tool": EXASearchTool,  # Add EXA semantic search tool
+}
+
+def instantiate_tool(tool_name: str, **kwargs) -> Any:
     if tool_name not in TOOL_REGISTRY:
         raise KeyError(f"Tool '{tool_name}' not found in registry. Available tools: {list(TOOL_REGISTRY.keys())}")
     
@@ -66,6 +88,14 @@ def instantiate_tool(tool_name: str, context=None, **kwargs) -> Any:
     # Pass context to tools that need it
     if context and tool_name in ["slack_list_channels_tool", "slack_resolve_channel_tool", "slack_send_message_tool"]:
         return tool_class(context=context, **kwargs)
+    
+    # Handle browserbase tool specially since it's a function
+    if tool_name == "browserbase_tool":
+        return tool_class(**kwargs)
+    
+    # Handle EXA search tool - instantiate normally
+    if tool_name == "exa_search_tool":
+        return tool_class(**kwargs)
     
     return tool_class(**kwargs)
 

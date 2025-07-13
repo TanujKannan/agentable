@@ -111,18 +111,17 @@ pip install -r requirements.txt
 
 2. **Set environment variables:**
 ```bash
-<<<<<<< HEAD
-export OPENAI_API_KEY="your-openai-api-key"
-=======
 # Copy the template and fill in your values
 cp env.template .env
 
 # Or set manually:
 export OPENAI_API_KEY="your-openai-api-key"
+export SERPER_API_KEY="your-serper-api-key"
+export BROWSERBASE_API_KEY="your-browserbase-api-key"
+export BROWSERBASE_PROJECT_ID="your-browserbase-project-id"
 export FLY_API_TOKEN="your-fly-api-token"
 export FLY_APP_NAME="your-app-name"
 export FLY_ORG_SLUG="your-org-slug"
->>>>>>> main
 ```
 
 3. **Run the server:**
@@ -152,6 +151,12 @@ To enable cloud execution:
 ### Environment Variables
 - `OPENAI_API_KEY`: Required for SpecAgent LLM functionality and DALL-E image generation
 - `SERPER_API_KEY`: Required for web search functionality (get free key at https://serper.dev)
+<<<<<<< Updated upstream
+- `EXA_API_KEY`: Required for semantic search functionality (get free key at https://exa.ai)
+=======
+- `BROWSERBASE_API_KEY`: Required for web navigation features (get key at https://browserbase.com)
+- `BROWSERBASE_PROJECT_ID`: Required for web navigation features (get from https://browserbase.com)
+>>>>>>> Stashed changes
 - `PORT`: Server port (default: 8000)
 
 ### CORS Settings
@@ -204,9 +209,18 @@ The system supports various agent types:
 The system includes the following tools that agents can use:
 
 ### Search Tools
+- **exa_search_tool**: Semantic search across the internet using EXA API (high-quality, contextually relevant results)
 - **serper_dev_tool**: Web search and research using Serper API
 - **website_search_tool**: Website content search and analysis
 - **code_docs_search_tool**: Code documentation search
+
+### Web Navigation Tools
+- **browserbase_tool**: Web navigation and interaction using Browserbase
+  - Navigate to specific websites
+  - Interact with web applications
+  - Extract content from JavaScript-heavy pages
+  - Take screenshots and perform web actions
+  - Requires: `BROWSERBASE_API_KEY` and `BROWSERBASE_PROJECT_ID`
 
 ### Image Generation Tools
 - **dalle_tool**: AI image generation using DALL-E
@@ -221,6 +235,8 @@ The system includes the following tools that agents can use:
 **Text-based tasks:**
 ```
 "Research the latest AI trends and create a summary report"
+"Find high-quality research papers about machine learning interpretability"
+"Conduct semantic search for recent developments in quantum computing"
 ```
 
 **Image generation tasks:**
@@ -230,9 +246,17 @@ The system includes the following tools that agents can use:
 "Design a landscape with mountains and a lake"
 ```
 
+**Web navigation tasks:**
+```
+"Navigate to https://example.com and extract the main content"
+"Browse through the product pages on an e-commerce site"
+"Take a screenshot of a specific webpage"
+```
+
 **Combined tasks:**
 ```
 "Research renewable energy and create an infographic about solar power"
+"Find the latest news about AI and browse specific article pages for details"
 ```
 
 ## Error Handling
