@@ -96,7 +96,10 @@ Real-time event streaming for a specific run.
 ### Prerequisites
 - Python 3.8+
 - OpenAI API key (for SpecAgent)
+<<<<<<< HEAD
+=======
 - Fly.io account and API token (for cloud execution)
+>>>>>>> main
 
 ### Installation
 
@@ -108,6 +111,9 @@ pip install -r requirements.txt
 
 2. **Set environment variables:**
 ```bash
+<<<<<<< HEAD
+export OPENAI_API_KEY="your-openai-api-key"
+=======
 # Copy the template and fill in your values
 cp env.template .env
 
@@ -116,6 +122,7 @@ export OPENAI_API_KEY="your-openai-api-key"
 export FLY_API_TOKEN="your-fly-api-token"
 export FLY_APP_NAME="your-app-name"
 export FLY_ORG_SLUG="your-org-slug"
+>>>>>>> main
 ```
 
 3. **Run the server:**
@@ -125,6 +132,8 @@ uvicorn main:app --reload --port 8000
 
 The server will start at `http://localhost:8000`
 
+<<<<<<< HEAD
+=======
 ### Cloud Execution with Fly Machines
 
 The backend automatically detects if Fly Machines API credentials are configured:
@@ -137,6 +146,7 @@ To enable cloud execution:
 2. Set the required environment variables (see `env.template`)
 3. Restart the server
 
+>>>>>>> main
 ## Configuration
 
 ### Environment Variables
