@@ -41,19 +41,32 @@ export const startRun = async (prompt: string): Promise<RunResponse> => {
     if (!backendUrl) {
         throw new Error("Backend URL is not configured");
     }
-  const response = await fetch(`${backendUrl}/api/run`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ prompt }),
-  });
+    
+    console.log(`Making request to: ${backendUrl}/api/run`);
+    
+    try {
+        const response = await fetch(`${backendUrl}/api/run`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt }),
+        });
 
-  if (!response.ok) {
-    throw new Error(`Failed to start run: ${response.statusText}`);
-  }
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Server responded with ${response.status}: ${errorText}`);
+            throw new Error(`Failed to start run: ${response.status} ${response.statusText}`);
+        }
 
-  return response.json();
+        return response.json();
+    } catch (error) {
+        console.error('Network error:', error);
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            throw new Error(`Cannot connect to backend at ${backendUrl}. Please check if the backend is running and accessible.`);
+        }
+        throw error;
+    }
 };
 
 // Create WebSocket connection for real-time updates

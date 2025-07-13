@@ -300,7 +300,7 @@ export default function Home() {
                 isTransitioning ? 'opacity-0' : 'opacity-100'
               }`}>
                 <h2 className="text-2xl font-semibold text-[#2C3E50] mb-2">What can I help you build today?</h2>
-                <p className="text-[#2C3E50]/70">Describe your task and I'll create the perfect AI crew to complete it</p>
+                <p className="text-[#2C3E50]/70">Describe your task and I&apos;ll create the perfect AI crew to complete it</p>
               </div>
               
               {/* Landing Chat Input */}

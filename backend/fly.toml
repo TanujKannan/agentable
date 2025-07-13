@@ -6,6 +6,10 @@
 app = 'backend-holy-violet-2759'
 primary_region = 'sjc'
 
+[env]
+  PORT = "8080"
+  WANDB_API_KEY = "9c4b3be83d217dfb00938a71c49de70e3d47e492"
+
 [http_service]
   internal_port = 8080
   force_https = true

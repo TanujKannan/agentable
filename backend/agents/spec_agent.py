@@ -78,7 +78,6 @@ class SpecAgent:
         - General research questions (use serper_dev_tool or exa_search_tool)
         - Finding facts, definitions, or explanations (use serper_dev_tool or exa_search_tool)
         - Basic information gathering (use serper_dev_tool or exa_search_tool)
-        - When user just wants to know "what is..." or "how to..." (use serper_dev_tool or exa_search_tool)
         
         WHEN TO USE EXA SEARCH TOOL:
         - Use "exa_search_tool" when you need semantic, contextually-aware search results
@@ -210,7 +209,7 @@ class SpecAgent:
                 
             print("Making OpenAI API call...")
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o-2024-08-06",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Convert this prompt to a crew specification: {prompt}"}

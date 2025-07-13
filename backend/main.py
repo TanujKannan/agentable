@@ -32,11 +32,17 @@ def filter_output(output):
     else:
         return str(output)  # Convert complex objects to string
 
-weave.init(
-    project_name="agentable-crewai",
-    global_postprocess_inputs=filter_inputs,
-    global_postprocess_output=filter_output
-)
+# Try to initialize Weave, but don't fail if it's not configured
+try:
+    weave.init(
+        project_name="agentable-crewai",
+        global_postprocess_inputs=filter_inputs,
+        global_postprocess_output=filter_output
+    )
+    print("✅ Weave tracing initialized successfully")
+except Exception as e:
+    print(f"⚠️  Weave tracing not available: {e}")
+    print("   This is OK for production - continuing without tracing...")
 
 app = FastAPI()
 
@@ -46,6 +52,7 @@ app.add_middleware(
         "http://localhost:3000",  # Local development
         "https://agentable-frontend.fly.dev",  # Production frontend
         "https://*.fly.dev",  # Allow any fly.dev subdomain
+        "*",  # Allow all origins (consider restricting this in production)
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -102,4 +109,18 @@ async def stream_logs(websocket: WebSocket, task_id: str):
 
 @app.get("/")
 async def root():
-    return {"message": "Agentable Backend API "}
+    return {"message": "Agentable Backend API"}
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "message": "Backend is running",
+        "port": os.getenv("PORT", "8000"),
+        "cors_origins": [
+            "http://localhost:3000",
+            "https://agentable-frontend.fly.dev",
+            "https://*.fly.dev",
+            "*",
+        ]
+    }

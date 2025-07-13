@@ -2,6 +2,8 @@
 
 **AI Crew Manager** - A real-time platform for orchestrating intelligent AI agent teams using CrewAI and modern web technologies.
 
+![Agentable Logo](frontend/public/agentablelogowhitetext.png)
+
 ![Project Status](https://img.shields.io/badge/Status-Active%20Development-green)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Backend](https://img.shields.io/badge/Backend-FastAPI%20%2B%20CrewAI-orange)
