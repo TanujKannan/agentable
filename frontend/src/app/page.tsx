@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import CloudTaskExecutor from '@/components/ui/sandbox';
+import ReactMarkdown from 'react-markdown';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
 
@@ -14,6 +15,7 @@ export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [shouldRunSandbox, setShouldRunSandbox] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -137,16 +139,32 @@ export default function Home() {
               </CardHeader>
               <CardContent className="p-6 pt-0">
                 {hasStarted ? (
-                  <CloudTaskExecutor 
-                    prompt={prompt} 
+                  <CloudTaskExecutor
+                    prompt={prompt}
                     shouldRun={shouldRunSandbox}
                     onStatusChange={handleSandboxStatusChange}
+                    onResult={(finalResult) => setResult(finalResult)}
                     onClose={() => {}}
                   />
                 ) : (
                   <div className="h-64 flex items-center justify-center text-gray-500">
                     <p>Start a task to see the execution here...</p>
                   </div>
+                )}
+
+                {/*This is the new section to display the result*/}
+                {result && (
+                  <>
+                    <Separator className="my-4" />
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">Final Result:</h3>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                        <div className="text-sm text-green-800 prose prose-sm max-w-none">
+                          <ReactMarkdown>{result}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
