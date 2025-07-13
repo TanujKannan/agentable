@@ -123,54 +123,75 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Info section when no prompt */}
         {!prompt && (
           <div className="mt-8 text-center text-gray-600">
             <p className="text-lg">Enter a task above to get started with your AI crew</p>
           </div>
+        )}
 
-          {/* Sandbox/Execution Section */}
-          <div>
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+        {/* Execution Status Section */}
+        <div className="mt-8">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-medium text-gray-800">
+                Execution Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              {hasStarted ? (
+                <div className="h-64 flex items-center justify-center text-gray-600">
+                  <p>Task is running in the execution window...</p>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <p>Start a task to see the execution here...</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Results Section */}
+        {result && (
+          <div className="mt-8">
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-medium text-gray-800">
-                  Live Execution
+                  Final Result
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 pt-0">
-                {hasStarted ? (
-                  <CloudTaskExecutor
-                    prompt={prompt}
-                    shouldRun={shouldRunSandbox}
-                    onStatusChange={handleSandboxStatusChange}
-                    onResult={(finalResult) => setResult(finalResult)}
-                    onClose={() => {}}
-                  />
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-gray-500">
-                    <p>Start a task to see the execution here...</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <div className="text-sm text-green-800 prose prose-sm max-w-none
+                    prose-headings:text-green-900 prose-headings:font-medium
+                    prose-p:text-green-800 prose-p:leading-relaxed
+                    prose-strong:text-green-900 prose-strong:font-semibold
+                    prose-img:rounded-lg prose-img:shadow-sm prose-img:max-w-full prose-img:h-auto
+                    prose-a:text-green-700 prose-a:underline
+                    prose-ul:text-green-800 prose-ol:text-green-800
+                    prose-li:text-green-800">
+                    <ReactMarkdown>{result}</ReactMarkdown>
                   </div>
-                )}
-
-                {/*This is the new section to display the result*/}
-                {result && (
-                  <>
-                    <Separator className="my-4" />
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-700 mb-2">Final Result:</h3>
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                        <div className="text-sm text-green-800 prose prose-sm max-w-none">
-                          <ReactMarkdown>{result}</ReactMarkdown>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
+                </div>
               </CardContent>
             </Card>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Popup Modal for Task Execution */}
+      {hasStarted && (
+        <CloudTaskExecutor
+          prompt={prompt}
+          shouldRun={shouldRunSandbox}
+          onStatusChange={handleSandboxStatusChange}
+          onResult={(finalResult) => setResult(finalResult)}
+          onClose={() => {
+            setHasStarted(false);
+            setShouldRunSandbox(false);
+          }}
+        />
+      )}
     </div>
   );
 }

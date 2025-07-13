@@ -12,6 +12,7 @@ interface SandBoxProps {
   prompt?: string;
   shouldRun?: boolean;
   onStatusChange?: (status: 'idle' | 'running' | 'complete' | 'error') => void;
+  onResult?: (result: string) => void;
   onClose?: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function CloudTaskExecutor({
   prompt = 'Sample task for testing', 
   shouldRun = false,
   onStatusChange,
+  onResult,
   onClose
 }: SandBoxProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -77,6 +79,9 @@ export default function CloudTaskExecutor({
             addLog('✅ Process completed');
             if (data.result) {
               addLog(`📊 Result: ${data.result}`);
+              if (onResult) {
+                onResult(data.result);
+              }
             }
             setIsRunning(false);
             setConnectionStatus('disconnected');
