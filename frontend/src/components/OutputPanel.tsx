@@ -157,15 +157,8 @@ export default function OutputPanel({ logs, result, status, runId, pipelineData,
           <div className="h-full p-4">
             {result ? (
               <div className="h-full overflow-y-auto">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 h-full">
-                  <div className="text-sm text-green-800 prose prose-sm max-w-none
-                    prose-headings:text-green-900 prose-headings:font-medium
-                    prose-p:text-green-800 prose-p:leading-relaxed
-                    prose-strong:text-green-900 prose-strong:font-semibold
-                    prose-img:rounded-lg prose-img:shadow-sm prose-img:max-w-full prose-img:h-auto
-                    prose-a:text-green-700 prose-a:underline
-                    prose-ul:text-green-800 prose-ol:text-green-800
-                    prose-li:text-green-800">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 h-full">
+                  <div className="prose max-w-none">
                     <ReactMarkdown>{result}</ReactMarkdown>
                   </div>
                 </div>
