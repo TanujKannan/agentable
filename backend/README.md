@@ -120,7 +120,8 @@ The server will start at `http://localhost:8000`
 ## Configuration
 
 ### Environment Variables
-- `OPENAI_API_KEY`: Required for SpecAgent LLM functionality
+- `OPENAI_API_KEY`: Required for SpecAgent LLM functionality and DALL-E image generation
+- `SERPER_API_KEY`: Required for web search functionality (get free key at https://serper.dev)
 - `PORT`: Server port (default: 8000)
 
 ### CORS Settings
@@ -166,6 +167,43 @@ The system supports various agent types:
 - **AnalysisAgent**: Data analysis and processing
 - **ResearchAgent**: Research and investigation tasks
 - **WritingAgent**: Content generation and writing
+- **ImageAgent**: Image generation using DALL-E AI
+
+## Available Tools
+
+The system includes the following tools that agents can use:
+
+### Search Tools
+- **serper_dev_tool**: Web search and research using Serper API
+- **website_search_tool**: Website content search and analysis
+- **code_docs_search_tool**: Code documentation search
+
+### Image Generation Tools
+- **dalle_tool**: AI image generation using DALL-E
+  - Model: `dall-e-3` (more reliable)
+  - Size: `1024x1024`
+  - Quality: `standard`
+  - Images per request: 1
+  - Usage: Include image generation requests in prompts
+
+### Usage Examples
+
+**Text-based tasks:**
+```
+"Research the latest AI trends and create a summary report"
+```
+
+**Image generation tasks:**
+```
+"Create an image of a futuristic city at sunset"
+"Generate a logo for a tech startup"
+"Design a landscape with mountains and a lake"
+```
+
+**Combined tasks:**
+```
+"Research renewable energy and create an infographic about solar power"
+```
 
 ## Error Handling
 
