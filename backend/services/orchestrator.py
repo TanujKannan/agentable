@@ -129,12 +129,12 @@ async def runCrew(prompt: str, run_id: str, manager):
             "message": "🚀 Initializing crew execution pipeline..."
         })
         
-        # Send agent initialization updates
-        for i, agent in enumerate(crew.agents, 1):
+        # Send agent initialization updates (only for agents with tasks)
+        for i, agent_data in enumerate(agents_with_tasks):
             await manager.send_message(run_id, {
                 "type": "agent-update",
-                "message": f"⚡ Agent {i}/{len(crew.agents)} initialized: '{agent.role}' ready for action",
-                "agent_id": i-1,
+                "message": f"⚡ Agent {i+1}/{len(agents_with_tasks)} initialized: '{agent_data['role']}' ready for action",
+                "agent_id": i,
                 "agent_status": "ready"
             })
             await asyncio.sleep(0.2)  # Small delay for visual effect
@@ -146,7 +146,7 @@ async def runCrew(prompt: str, run_id: str, manager):
             # Send start message
             await manager.send_message(run_id, {
                 "type": "agent-update", 
-                "message": f"🚀 Starting crew with {len(crew.agents)} agents and {len(crew.tasks)} tasks...",
+                "message": f"🚀 Starting crew with {len(agents_with_tasks)} agents and {len(crew.tasks)} tasks...",
                 "pipeline_status": "running"
             })
             
