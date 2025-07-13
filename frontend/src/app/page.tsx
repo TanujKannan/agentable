@@ -1,102 +1,35 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
-import { startRun, setupWebSocket, WebSocketEvent } from '@/lib/api';
+import CloudTaskExecutor from '@/components/ui/sandbox';
+import ReactMarkdown from 'react-markdown';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
-  const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [logs, setLogs] = useState<string[]>([]);
+  const [shouldRunSandbox, setShouldRunSandbox] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const logsEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll logs to bottom
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
-
-  // Cleanup WebSocket on unmount
-  useEffect(() => {
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, []);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || status === 'running') return;
 
-    try {
-      setStatus('running');
-      setLogs([]);
-      setResult(null);
-      
-      // Start the crew run
-      const { runId: newRunId } = await startRun(prompt);
-      setRunId(newRunId);
-      
-      // Set up WebSocket connection
-      wsRef.current = setupWebSocket(
-        newRunId,
-        handleWebSocketEvent,
-        handleWebSocketError,
-        handleWebSocketClose
-      );
-      
-    } catch (error) {
-      console.error('Failed to start run:', error);
-      setStatus('error');
-      setLogs(prev => [...prev, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
-    }
+    // Start execution
+    setHasStarted(true);
+    setShouldRunSandbox(false);
+    setTimeout(() => setShouldRunSandbox(true), 100);
   };
 
-  const handleWebSocketEvent = (event: WebSocketEvent) => {
-    switch (event.type) {
-      case 'log':
-        setLogs(prev => [...prev, event.message]);
-        break;
-      case 'agent-update':
-        setLogs(prev => [...prev, `Agent Update: ${event.message}`]);
-        break;
-      case 'complete':
-        setStatus('complete');
-        if (event.result) {
-          setResult(event.result);
-        }
-        setLogs(prev => [...prev, `Complete: ${event.message}`]);
-        break;
-      case 'error':
-        setStatus('error');
-        setLogs(prev => [...prev, `Error: ${event.message}`]);
-        break;
-    }
-  };
-
-  const handleWebSocketError = (error: Event) => {
-    console.error('WebSocket error:', error);
-    setStatus('error');
-    setLogs(prev => [...prev, 'Connection error occurred']);
-  };
-
-  const handleWebSocketClose = (event: CloseEvent) => {
-    console.log('WebSocket closed:', event.code, event.reason);
-    if (status === 'running') {
-      setStatus('error');
-      setLogs(prev => [...prev, 'Connection closed unexpectedly']);
-    }
+  const handleSandboxStatusChange = (newStatus: Status) => {
+    setStatus(newStatus);
   };
 
   const getStatusColor = (status: Status) => {
@@ -110,14 +43,9 @@ export default function Home() {
 
   const resetSession = () => {
     setPrompt('');
-    setRunId(null);
     setStatus('idle');
-    setLogs([]);
-    setResult(null);
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    setShouldRunSandbox(false);
+    setHasStarted(false);
   };
 
   return (
@@ -140,104 +68,130 @@ export default function Home() {
               {status === 'complete' && 'Task Complete'}
               {status === 'error' && 'Error Occurred'}
             </Badge>
-            {runId && (
-              <p className="text-xs text-gray-500 mt-1">Run ID: {runId}</p>
-            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Prompt Input Section */}
-          <div>
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6">
-                <CardTitle className="text-lg font-medium flex items-center justify-between">
-                  Create Task
-                </CardTitle>
-              </div>
-              <CardContent className="p-6">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="prompt" className="text-sm font-medium text-gray-700">
-                      Describe what you need
-                    </Label>
-                    <Textarea
-                      id="prompt"
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="What would you like your AI crew to help you with?"
-                      className="min-h-[120px] resize-none border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white/50"
-                      disabled={status === 'running'}
-                    />
-                  </div>
-                  
-                  <Button
-                    type="submit"
-                    disabled={!prompt.trim() || status === 'running'}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-600"
-                    size="lg"
-                  >
-                    {status === 'running' ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Creating crew...
-                      </div>
-                    ) : (
-                      'Create AI Crew'
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+        {/* Prompt Input Section */}
+        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm max-w-2xl mx-auto">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6">
+            <CardTitle className="text-lg font-medium flex items-center justify-between">
+              Create Task
+              {status !== 'idle' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetSession}
+                  className="text-white border-white hover:bg-white hover:text-purple-600"
+                >
+                  New Task
+                </Button>
+              )}
+            </CardTitle>
           </div>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="prompt" className="text-sm font-medium text-gray-700">
+                  Describe what you need
+                </Label>
+                <Textarea
+                  id="prompt"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="What would you like your AI crew to help you with?"
+                  className="min-h-[120px] resize-none border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white/50"
+                  disabled={status === 'running'}
+                />
+              </div>
+              
+              <Button
+                type="submit"
+                disabled={!prompt.trim() || status === 'running'}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                size="lg"
+              >
+                {status === 'running' ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Creating crew...
+                  </div>
+                ) : (
+                  'Create AI Crew'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-          {/* Real-time Output Section */}
-          <div>
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+        {!prompt && (
+          <div className="mt-8 text-center text-gray-600">
+            <p className="text-lg">Enter a task above to get started with your AI crew</p>
+          </div>
+        )}
+
+        {/* Execution Status Section */}
+        <div className="mt-8">
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-medium text-gray-800">
+                Execution Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              {hasStarted ? (
+                <div className="h-64 flex items-center justify-center text-gray-600">
+                  <p>Task is running in the execution window...</p>
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <p>Start a task to see the execution here...</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Results Section */}
+        {result && (
+          <div className="mt-8">
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-medium text-gray-800">
-                  Live Output
+                  Final Result
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 pt-0">
-                {/* Logs Display */}
-                <div className="space-y-4">
-                  <div className="bg-gray-900 rounded-lg p-4 h-64 overflow-y-auto">
-                    {logs.length === 0 ? (
-                      <p className="text-gray-400 text-sm">Logs will appear here when your crew starts working...</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {logs.map((log, index) => (
-                          <div key={index} className="text-green-400 text-sm font-mono">
-                            {log}
-                          </div>
-                        ))}
-                        <div ref={logsEndRef} />
-                      </div>
-                    )}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <div className="text-sm text-green-800 prose prose-sm max-w-none
+                    prose-headings:text-green-900 prose-headings:font-medium
+                    prose-p:text-green-800 prose-p:leading-relaxed
+                    prose-strong:text-green-900 prose-strong:font-semibold
+                    prose-img:rounded-lg prose-img:shadow-sm prose-img:max-w-full prose-img:h-auto
+                    prose-a:text-green-700 prose-a:underline
+                    prose-ul:text-green-800 prose-ol:text-green-800
+                    prose-li:text-green-800">
+                    <ReactMarkdown>{result}</ReactMarkdown>
                   </div>
-
-                  {/* Results Section */}
-                  {result && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Final Result:</h3>
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                          <MarkdownRenderer 
-                            content={result} 
-                            className="text-green-800"
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Popup Modal for Task Execution */}
+      {hasStarted && (
+        <CloudTaskExecutor
+          prompt={prompt}
+          shouldRun={shouldRunSandbox}
+          onStatusChange={handleSandboxStatusChange}
+          onResult={(finalResult) => setResult(finalResult)}
+          onClose={() => {
+            setHasStarted(false);
+            setShouldRunSandbox(false);
+          }}
+        />
+      )}
     </div>
   );
 }

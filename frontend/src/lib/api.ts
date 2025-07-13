@@ -14,9 +14,30 @@ export interface WebSocketEvent {
   data?: unknown;
 }
 
+// Get the backend URL from environment variables
+const getBackendUrl = () => {
+  // In production, use the deployed backend URL
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-holy-violet-2759.fly.dev';
+  }
+  // In development, use localhost
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+};
+
+const getWebSocketUrl = () => {
+  // In production, use wss for secure WebSocket connection
+  if (process.env.NODE_ENV === 'production') {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-holy-violet-2759.fly.dev';
+    return backendUrl.replace('https://', 'wss://');
+  }
+  // In development, use ws
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+  return backendUrl.replace('http://', 'ws://');
+};
+
 // Start a new crew run
 export const startRun = async (prompt: string): Promise<RunResponse> => {
-  const response = await fetch('http://localhost:8000/api/run', {
+  const response = await fetch(`${getBackendUrl()}/api/run`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +54,7 @@ export const startRun = async (prompt: string): Promise<RunResponse> => {
 
 // Create WebSocket connection for real-time updates
 export const createWebSocket = (runId: string): WebSocket => {
-  const ws = new WebSocket(`ws://localhost:8000/api/ws/${runId}`);
+  const ws = new WebSocket(`${getWebSocketUrl()}/api/ws/${runId}`);
   return ws;
 };
 
