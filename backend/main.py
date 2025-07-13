@@ -14,6 +14,30 @@ from pydantic import BaseModel
 from services.orchestrator import runCrew
 from services.fly_machine_launcher import run_fly_machine
 
+# Initialize Weave for tracing with filtering
+import weave
+
+def filter_inputs(inputs):
+    """Filter out non-serializable objects from inputs"""
+    if isinstance(inputs, dict):
+        return {k: v for k, v in inputs.items() if isinstance(v, (str, int, float, bool, list, dict))}
+    return inputs
+
+def filter_output(output):
+    """Filter out non-serializable objects from output"""
+    if isinstance(output, dict):
+        return {k: v for k, v in output.items() if isinstance(v, (str, int, float, bool, list, dict))}
+    elif isinstance(output, (str, int, float, bool, list)):
+        return output
+    else:
+        return str(output)  # Convert complex objects to string
+
+weave.init(
+    project_name="agentable-crewai",
+    global_postprocess_inputs=filter_inputs,
+    global_postprocess_output=filter_output
+)
+
 app = FastAPI()
 
 app.add_middleware(
