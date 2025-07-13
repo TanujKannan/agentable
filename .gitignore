@@ -298,3 +298,6 @@ temp/
 # Database files
 db/
 backend/db/
+
+# Byren's claude DOCS!!!
+CLAUDE.md
