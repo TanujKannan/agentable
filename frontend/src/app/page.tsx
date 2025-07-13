@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { startRun, setupWebSocket, WebSocketEvent } from '@/lib/api';
+import ReactMarkdown from 'react-markdown';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
 
@@ -223,7 +224,16 @@ export default function Home() {
                       <div>
                         <h3 className="text-sm font-medium text-gray-700 mb-2">Final Result:</h3>
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                          <pre className="text-sm text-green-800 whitespace-pre-wrap">{result}</pre>
+                          <div className="text-sm text-green-800 prose prose-sm max-w-none
+                            prose-headings:text-green-900 prose-headings:font-medium
+                            prose-p:text-green-800 prose-p:leading-relaxed
+                            prose-strong:text-green-900 prose-strong:font-semibold
+                            prose-img:rounded-lg prose-img:shadow-sm prose-img:max-w-full prose-img:h-auto
+                            prose-a:text-green-700 prose-a:underline
+                            prose-ul:text-green-800 prose-ol:text-green-800
+                            prose-li:text-green-800">
+                            <ReactMarkdown>{result}</ReactMarkdown>
+                          </div>
                         </div>
                       </div>
                     </>
