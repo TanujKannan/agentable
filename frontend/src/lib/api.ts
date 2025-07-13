@@ -21,28 +21,27 @@ export interface WebSocketEvent {
 
 // Get the backend URL from environment variables
 const getBackendUrl = () => {
-  // In production, use the deployed backend URL
   if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-holy-violet-2759.fly.dev';
+    if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
+      throw new Error("NEXT_PUBLIC_BACKEND_URL is not set in production");
+    }
+    return process.env.NEXT_PUBLIC_BACKEND_URL;
   }
-  // In development, use localhost
   return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 };
 
 const getWebSocketUrl = () => {
-  // In production, use wss for secure WebSocket connection
-  if (process.env.NODE_ENV === 'production') {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-holy-violet-2759.fly.dev';
-    return backendUrl.replace('https://', 'wss://');
-  }
-  // In development, use ws
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-  return backendUrl.replace('http://', 'ws://');
+  const backendUrl = getBackendUrl();
+  return backendUrl.replace(/^http/, 'ws');
 };
 
 // Start a new crew run
 export const startRun = async (prompt: string): Promise<RunResponse> => {
-  const response = await fetch(`${getBackendUrl()}/api/run`, {
+    const backendUrl = getBackendUrl();
+    if (!backendUrl) {
+        throw new Error("Backend URL is not configured");
+    }
+  const response = await fetch(`${backendUrl}/api/run`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

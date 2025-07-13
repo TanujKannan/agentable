@@ -8,12 +8,25 @@ interface LogEntry {
   timestamp: Date;
 }
 
+const getBackendUrl = (): string | null => {
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXT_PUBLIC_BACKEND_URL || null;
+  }
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+};
+
 interface SandBoxProps {
   prompt?: string;
   shouldRun?: boolean;
   onStatusChange?: (status: 'idle' | 'running' | 'complete' | 'error') => void;
   onResult?: (result: string) => void;
   onClose?: () => void;
+  runId?: string | null;
+  // New props for embedded mode
+  embedded?: boolean;
+  height?: string;
+  // External logs for embedded mode
+  externalLogs?: string[];
 }
 
 export default function CloudTaskExecutor({ 
@@ -21,20 +34,33 @@ export default function CloudTaskExecutor({
   shouldRun = false,
   onStatusChange,
   onResult,
-  onClose
+  onClose,
+  runId,
+  embedded = false,
+  height = '400px',
+  externalLogs = []
 }: SandBoxProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(runId || null);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const wsRef = useRef<WebSocket | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const hasRun = useRef(false);
 
+  // Convert external logs to LogEntry format when in embedded mode
+  const displayLogs = embedded && externalLogs.length > 0 
+    ? externalLogs.map((log, index) => ({
+        id: `external-${index}`,
+        message: log,
+        timestamp: new Date()
+      }))
+    : logs;
+
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
+  }, [logs, externalLogs]);
 
   const addLog = useCallback((message: string) => {
     const newLog: LogEntry = {
@@ -52,9 +78,13 @@ export default function CloudTaskExecutor({
 
     setConnectionStatus('connecting');
     
-    const wsUrl = process.env.NODE_ENV === 'production'
-      ? (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-holy-violet-2759.fly.dev').replace('https://', 'wss://')
-      : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000').replace('http://', 'ws://');
+    const backendUrl = getBackendUrl();
+    if (!backendUrl) {
+      addLog('❌ Cannot connect to WebSocket: Backend URL not configured.');
+      setConnectionStatus('error');
+      return;
+    }
+    const wsUrl = backendUrl.replace(/^http/, 'ws');
     
     const ws = new WebSocket(`${wsUrl}/api/ws/${taskId}`);
     wsRef.current = ws;
@@ -125,7 +155,7 @@ export default function CloudTaskExecutor({
       addLog('❌ WebSocket connection error');
       setIsRunning(false);
     };
-  }, [addLog]);
+  }, [addLog, onResult]);
 
   const runTask = useCallback(async () => {
     if (isRunning) return;
@@ -136,9 +166,12 @@ export default function CloudTaskExecutor({
     addLog('🚀 Starting task...');
 
     try {
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-holy-violet-2759.fly.dev')
-        : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000');
+      const backendUrl = getBackendUrl();
+      if (!backendUrl) {
+        addLog('❌ Configuration error: NEXT_PUBLIC_BACKEND_URL is not set.');
+        setIsRunning(false);
+        return;
+      }
       
       const response = await fetch(`${backendUrl}/api/run`, {
         method: 'POST',
@@ -179,6 +212,14 @@ export default function CloudTaskExecutor({
     hasRun.current = false;
   }, [prompt]);
 
+  // Connect to existing task if runId provided
+  useEffect(() => {
+    if (runId && runId !== taskId) {
+      setTaskId(runId);
+      connectWebSocket(runId);
+    }
+  }, [runId, taskId, connectWebSocket]);
+
   // Notify parent of status changes
   useEffect(() => {
     if (onStatusChange) {
@@ -186,15 +227,20 @@ export default function CloudTaskExecutor({
         onStatusChange('running');
       } else if (connectionStatus === 'error') {
         onStatusChange('error');
-      } else if (connectionStatus === 'disconnected' && logs.some(log => log.message.includes('Process completed'))) {
+      } else if (connectionStatus === 'disconnected' && displayLogs.some(log => log.message.includes('Process completed'))) {
         onStatusChange('complete');
       } else {
         onStatusChange('idle');
       }
     }
-  }, [isRunning, connectionStatus, logs, onStatusChange]);
+  }, [isRunning, connectionStatus, displayLogs, onStatusChange]);
 
   const clearLogs = () => {
+    if (embedded && externalLogs.length > 0) {
+      // In embedded mode with external logs, we can't clear them
+      // This would need to be handled by the parent component
+      return;
+    }
     setLogs([]);
   };
 
@@ -216,6 +262,65 @@ export default function CloudTaskExecutor({
     }
   };
 
+  // Embedded mode - just return the logs section
+  if (embedded) {
+    return (
+      <div className="h-full flex flex-col bg-gray-900 text-green-400 font-mono text-sm">
+        {/* Connection Status Bar */}
+        <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${
+              connectionStatus === 'connected' ? 'bg-green-500' : 
+              connectionStatus === 'connecting' ? 'bg-yellow-500' : 
+              connectionStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
+            }`}></div>
+            <span className={`text-sm font-medium ${getStatusColor()}`}>
+              {getStatusText()}
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            {taskId && (
+              <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
+                ID: {taskId.slice(0, 8)}...
+              </span>
+            )}
+            <button
+              onClick={clearLogs}
+              className="text-gray-400 hover:text-white transition-colors text-xs px-2 py-1 rounded hover:bg-gray-700"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {/* Logs Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-1" style={{ height }}>
+          {displayLogs.length === 0 ? (
+            <div className="text-gray-500 italic flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="text-2xl mb-2">🤖</div>
+                <p>Logs will appear here when your AI crew starts working...</p>
+              </div>
+            </div>
+          ) : (
+            displayLogs.map((log) => (
+              <div key={log.id} className="flex items-start space-x-3 py-1 hover:bg-gray-800/50 px-2 rounded">
+                <span className="text-gray-500 text-xs whitespace-nowrap mt-0.5">
+                  {log.timestamp.toLocaleTimeString()}
+                </span>
+                <span className="flex-1 break-words">
+                  {log.message}
+                </span>
+              </div>
+            ))
+          )}
+          <div ref={logsEndRef} />
+        </div>
+      </div>
+    );
+  }
+
+  // Original modal mode
   return (
     <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
@@ -302,7 +407,7 @@ export default function CloudTaskExecutor({
         {/* Log Output */}
         <div className="flex-1 overflow-y-auto bg-gray-900 text-green-400 font-mono text-sm" style={{ height: '400px' }}>
           <div className="p-4 space-y-1">
-            {logs.length === 0 ? (
+            {displayLogs.length === 0 ? (
               <div className="text-gray-500 italic flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="text-2xl mb-2">🤖</div>
@@ -310,7 +415,7 @@ export default function CloudTaskExecutor({
                 </div>
               </div>
             ) : (
-              logs.map((log) => (
+              displayLogs.map((log) => (
                 <div key={log.id} className="flex items-start space-x-3 py-1 hover:bg-gray-800/50 px-2 rounded">
                   <span className="text-gray-500 text-xs whitespace-nowrap mt-0.5">
                     {log.timestamp.toLocaleTimeString()}
@@ -329,11 +434,11 @@ export default function CloudTaskExecutor({
         <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
             <span>
-              {logs.length} log {logs.length === 1 ? 'entry' : 'entries'}
+              {displayLogs.length} log {displayLogs.length === 1 ? 'entry' : 'entries'}
             </span>
             <span>
               Backend: <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-xs">
-                {process.env.NODE_ENV === 'production' ? 'Production' : 'localhost:8000'}
+                {getBackendUrl() || 'Not Configured'}
               </code>
             </span>
           </div>

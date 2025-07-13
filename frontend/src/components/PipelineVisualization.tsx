@@ -2,41 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Play, AlertCircle } from 'lucide-react';
+import { WebSocketEvent } from '@/lib/api';
+import { PipelineData, Agent, Task } from '@/lib/types';
 
-interface Agent {
-  id: number;
-  role: string;
-  status: 'pending' | 'ready' | 'running' | 'completed' | 'error';
-}
-
-interface Task {
-  id: number;
-  description: string;
-  agent_id: number;
-  status: 'pending' | 'running' | 'completed' | 'error';
-}
-
-interface PipelineData {
-  agents: Agent[];
-  tasks: Task[];
-}
+type AgentStatus = Agent['status'];
+type TaskStatus = Task['status'];
+type PipelineStatus = 'idle' | 'running' | 'completed' | 'error';
 
 interface PipelineVisualizationProps {
   pipelineData: PipelineData | null;
-  agentUpdates: Array<{
-    agent_id?: number;
-    task_id?: number;
-    agent_status?: string;
-    task_status?: string;
-    pipeline_status?: string;
-  }>;
+  agentUpdates: WebSocketEvent[];
 }
 
 export default function PipelineVisualization({ pipelineData, agentUpdates }: PipelineVisualizationProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [pipelineStatus, setPipelineStatus] = useState<'idle' | 'running' | 'completed' | 'error'>('idle');
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>('idle');
 
   // Initialize pipeline data
   useEffect(() => {
@@ -51,13 +32,13 @@ export default function PipelineVisualization({ pipelineData, agentUpdates }: Pi
   useEffect(() => {
     agentUpdates.forEach(update => {
       if (update.pipeline_status) {
-        setPipelineStatus(update.pipeline_status as any);
+        setPipelineStatus(update.pipeline_status as PipelineStatus);
       }
       
       if (update.agent_id !== undefined && update.agent_status) {
         setAgents(prev => prev.map(agent => 
           agent.id === update.agent_id 
-            ? { ...agent, status: update.agent_status as any }
+            ? { ...agent, status: update.agent_status as AgentStatus }
             : agent
         ));
       }
@@ -65,7 +46,7 @@ export default function PipelineVisualization({ pipelineData, agentUpdates }: Pi
       if (update.task_id !== undefined && update.task_status) {
         setTasks(prev => prev.map(task => 
           task.id === update.task_id 
-            ? { ...task, status: update.task_status as any }
+            ? { ...task, status: update.task_status as TaskStatus }
             : task
         ));
       }

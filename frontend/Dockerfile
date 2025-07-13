@@ -26,6 +26,10 @@ RUN npm ci --include=dev
 # Copy application code
 COPY . .
 
+# Set the backend URL as build argument and environment variable
+ARG NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-https://backend-holy-violet-2759.fly.dev}
+
 # Build application
 RUN npm run build
 

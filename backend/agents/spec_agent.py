@@ -100,7 +100,7 @@ class SpecAgent:
                 return self._get_fallback_spec(prompt)
                 
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="o4-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Convert this prompt to a crew specification: {prompt}"}
