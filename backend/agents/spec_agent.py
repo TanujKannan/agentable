@@ -32,10 +32,29 @@ class SpecAgent:
         IMPORTANT: You must use the EXACT tool names from the list above. Do not use generic names like 'search' or 'llm'.
         
         Tool Usage Guidelines:
-        - Use "serper_dev_tool" for web search and research
+        - Use "serper_dev_tool" for web search and research (general searches, finding information)
         - Use "website_search_tool" for website content search
         - Use "code_docs_search_tool" for code documentation search
         - Use "dalle_tool" for image generation tasks
+        - Use "browserbase_tool" for web navigation and interaction (when user wants to browse a specific website, navigate through pages, or interact with complex web applications)
+        
+        CRITICAL: When to use Browserbase vs Regular Search:
+        
+        USE BROWSERBASE TOOLS when:
+        - User specifically mentions wanting to "browse", "navigate", or "visit" a website
+        - User wants to interact with a web application or fill out forms
+        - User needs to access content that requires JavaScript or complex rendering
+        - User wants to perform actions like clicking, scrolling, or taking screenshots
+        - User mentions specific websites they want to navigate through
+        - Task involves booking, purchasing, or multi-step web interactions
+        - User wants to extract content from dynamically loaded pages
+        
+        DO NOT USE BROWSERBASE TOOLS for:
+        - Simple searches for information (use serper_dev_tool)
+        - General research questions (use serper_dev_tool)
+        - Finding facts, definitions, or explanations (use serper_dev_tool)
+        - Basic information gathering (use serper_dev_tool)
+        - When user just wants to know "what is..." or "how to..." (use serper_dev_tool)
         
         CRITICAL TOOL USAGE: For image generation tasks using dalle_tool:
         - The parameter name MUST be 'image_description' (NOT 'description')
@@ -53,6 +72,12 @@ class SpecAgent:
                     "config_key": "researcher",
                     "tools": ["serper_dev_tool", "website_search_tool"],
                     "role_description": "Research specialist for gathering information"
+                }},
+                {{
+                    "name": "web_navigator",
+                    "config_key": "web_navigator",
+                    "tools": ["browserbase_tool"],
+                    "role_description": "Web navigation specialist for browsing websites, interacting with web applications, and extracting content from complex pages that require JavaScript rendering"
                 }},
                 {{
                     "name": "image_creator",
@@ -89,6 +114,7 @@ class SpecAgent:
         - ResearchAgent: For research tasks
         - WritingAgent: For content generation
         - ImageAgent: For image generation using DALL-E
+        - WebNavigationAgent: For browsing websites and interacting with web applications
         
         Always include relevant parameters in the params object.
         Respond with valid JSON only.
@@ -143,6 +169,12 @@ class SpecAgent:
                     "role_description": "Research specialist for gathering information"
                 },
                 {
+                    "name": "web_navigator",
+                    "config_key": "web_navigator",
+                    "tools": ["browserbase_tool"],
+                    "role_description": "Web navigation specialist for browsing websites, interacting with web applications, and extracting content from complex pages that require JavaScript rendering"
+                },
+                {
                     "name": "image_creator",
                     "config_key": "image_creator",
                     "tools": ["dalle_tool"],
@@ -193,6 +225,16 @@ class SpecAgent:
             'dall-e': 'dalle_tool',
             'generate_image': 'dalle_tool',
             'create_image': 'dalle_tool',
+            'browser': 'browserbase_tool',
+            'browse': 'browserbase_tool',
+            'navigate': 'browserbase_tool',
+            'browserbase': 'browserbase_tool',
+            'web_navigation': 'browserbase_tool',
+            'web_browse': 'browserbase_tool',
+            'click': 'browserbase_tool',
+            'interact': 'browserbase_tool',
+            'form_fill': 'browserbase_tool',
+            'screenshot': 'browserbase_tool',
         }
         
         # Fix agent tool names
