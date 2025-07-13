@@ -7,6 +7,7 @@ from crewai import Crew, Agent, Task
 
 from tools.tool_registry import instantiate_tool
 from tools.context_store import RunContext
+from services.history import history
 
 def format_result_for_markdown(result: str) -> str:
     """
@@ -21,6 +22,12 @@ async def runCrew(prompt: str, run_id: str, manager):
     2. Creates CrewAI agents and tasks from the JSON
     3. Executes the crew and broadcasts events via WebSocket
     """
+    import time
+    start_time = time.time()
+    
+    # Save initial run to history
+    history.save_run(run_id, prompt, status='running')
+    
     try:
         max_wait = 10  # seconds
         wait_time = 0
@@ -123,6 +130,9 @@ async def runCrew(prompt: str, run_id: str, manager):
             "data": pipeline_data
         })
         
+        # Save pipeline data to history
+        history.save_run(run_id, prompt, pipeline_data=pipeline_data, status='running')
+        
         # Simple test to verify WebSocket is working
         await manager.send_message(run_id, {
             "type": "log",
@@ -180,6 +190,10 @@ async def runCrew(prompt: str, run_id: str, manager):
         # Format the result to ensure URLs are properly formatted as markdown
         formatted_result = format_result_for_markdown(str(result))
         
+        # Calculate duration and save completed run to history
+        duration_seconds = int(time.time() - start_time)
+        history.save_run(run_id, prompt, result=formatted_result, status='complete', duration_seconds=duration_seconds)
+        
         await manager.send_message(run_id, {
             "type": "complete",
             "message": "Crew execution completed successfully!",
@@ -187,6 +201,10 @@ async def runCrew(prompt: str, run_id: str, manager):
         })
         
     except Exception as e:
+        # Save error to history
+        duration_seconds = int(time.time() - start_time)
+        history.save_run(run_id, prompt, status='error', duration_seconds=duration_seconds)
+        
         await manager.send_message(run_id, {
             "type": "error",
             "message": f"Error in crew execution: {str(e)}"
