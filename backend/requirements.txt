@@ -244,3 +244,5 @@ yarl==1.20.1
 youtube-transcript-api==1.1.1
 zipp==3.23.0
 zstandard==0.23.0
+nats-py==2.6.0  # For Fly NATS log streaming
+browserbase==0.1.0

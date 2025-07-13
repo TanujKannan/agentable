@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { startRun, setupWebSocket, WebSocketEvent } from '@/lib/api';
+import { startRun, setupWebSocket, WebSocketEvent, HistoryRun } from '@/lib/api';
 import ChatInterface from '@/components/ChatInterface';
 import OutputPanel from '@/components/OutputPanel';
 import LandingChatInput from '@/components/LandingChatInput';
+import HistoryPanel from '@/components/HistoryPanel';
 import { PipelineData } from '@/lib/types';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
@@ -27,6 +28,7 @@ export default function Home() {
   const [agentUpdates, setAgentUpdates] = useState<WebSocketEvent[]>([]);
   const [isLandingMode, setIsLandingMode] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Cleanup WebSocket on unmount
@@ -251,6 +253,38 @@ export default function Home() {
     }
   };
 
+  const handleSelectHistoryRun = (run: HistoryRun) => {
+    // Load the historical run data
+    if (run.pipeline_data) {
+      setPipelineData(run.pipeline_data);
+    }
+    if (run.result) {
+      setResult(run.result);
+    }
+    
+    // Add the prompt as a user message
+    const userMessage: ChatMessage = {
+      id: `history_${run.id}`,
+      content: run.prompt,
+      type: 'user',
+      timestamp: new Date(run.timestamp),
+    };
+    
+    // Add completion message
+    const systemMessage: ChatMessage = {
+      id: `history_system_${run.id}`,
+      content: run.status === 'complete' ? 'Task completed successfully ✓' : 
+               run.status === 'error' ? 'Task failed ✗' : 'Task in progress...',
+      type: 'system',
+      timestamp: new Date(run.timestamp),
+    };
+    
+    setMessages([userMessage, systemMessage]);
+    setRunId(run.id);
+    setStatus(run.status as Status);
+    setShowHistory(false);
+  };
+
   if (isLandingMode || isTransitioning) {
     return (
       <div className="h-screen relative overflow-hidden">
@@ -331,18 +365,37 @@ export default function Home() {
               <p className="text-sm text-[#2C3E50]">Automate Intelligently, Deliver Powerfully</p>
             </div>
           </div>
-          <div className="text-right">
-            {runId && (
-              <p className="text-xs text-gray-500">Run ID: {runId}</p>
-            )}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                showHistory 
+                  ? 'bg-[#17A589] text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              History
+            </button>
+            <div className="text-right">
+              {runId && (
+                <p className="text-xs text-gray-500">Run ID: {runId}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Chat Panel - Left side, takes 35% of screen */}
-        <div className="w-[35%] min-w-0 border-r border-gray-200">
+        {/* History Panel - Conditionally shown on left */}
+        {showHistory && (
+          <div className="w-80 min-w-0">
+            <HistoryPanel onSelectRun={handleSelectHistoryRun} />
+          </div>
+        )}
+
+        {/* Chat Panel - Left side, takes proportional space */}
+        <div className={`${showHistory ? 'w-80' : 'w-[35%]'} min-w-0 border-r border-gray-200`}>
           <ChatInterface
             onSubmit={handleChatSubmit}
             isLoading={status === 'running'}
@@ -350,8 +403,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Output Panel - Right side, takes 65% of screen */}
-        <div className="w-[65%] min-w-0">
+        {/* Output Panel - Right side, takes remaining space */}
+        <div className="flex-1 min-w-0">
           <OutputPanel
             logs={logs}
             result={result}

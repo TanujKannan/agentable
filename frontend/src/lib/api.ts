@@ -19,6 +19,16 @@ export interface WebSocketEvent {
   pipeline_status?: string;
 }
 
+export interface HistoryRun {
+  id: string;
+  prompt: string;
+  pipeline_data?: any;
+  result?: string;
+  status: string;
+  timestamp: string;
+  duration_seconds?: number;
+}
+
 // Get the backend URL from environment variables
 const getBackendUrl = () => {
   if (process.env.NODE_ENV === 'production') {
@@ -105,4 +115,59 @@ export const setupWebSocket = (
   }
 
   return ws;
+};
+
+// Fetch run history
+export const fetchHistory = async (limit: number = 10): Promise<HistoryRun[]> => {
+  const backendUrl = getBackendUrl();
+  
+  try {
+    const response = await fetch(`${backendUrl}/api/history?limit=${limit}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch history: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.runs;
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    throw error;
+  }
+};
+
+// Fetch a specific run by ID
+export const fetchRunById = async (runId: string): Promise<HistoryRun> => {
+  const backendUrl = getBackendUrl();
+  
+  try {
+    const response = await fetch(`${backendUrl}/api/history/${runId}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch run: ${response.status} ${response.statusText}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching run:', error);
+    throw error;
+  }
+};
+
+// Clear all history
+export const clearHistory = async (): Promise<void> => {
+  const backendUrl = getBackendUrl();
+  
+  try {
+    const response = await fetch(`${backendUrl}/api/history`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to clear history: ${response.status} ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Error clearing history:', error);
+    throw error;
+  }
 };

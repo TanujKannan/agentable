@@ -6,48 +6,14 @@ from agents.spec_agent import SpecAgent
 from crewai import Crew, Agent, Task
 
 from tools.tool_registry import instantiate_tool
+from tools.context_store import RunContext
+from services.history import history
 
 def format_result_for_markdown(result: str) -> str:
     """
-    Format the result to ensure URLs are properly formatted as markdown links or images.
-    This ensures that image URLs are rendered as images and other URLs as clickable links.
+    Pass through the CrewAI result as-is since it's already formatted markdown.
     """
-    # Enhanced regex to find URLs in various formats
-    url_pattern = r'(https?://[^\s\)\]]+)'
-    
-    def replace_url(match):
-        url = match.group(1)
-        # Clean up URL by removing trailing punctuation that might not be part of URL
-        url = re.sub(r'[.,;:!?)\]]*$', '', url)
-        
-        # Check if it's likely an image URL
-        if re.search(r'\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$', url, re.IGNORECASE):
-            return f'![Generated Image]({url})'
-        else:
-            # For other URLs, create a clickable link
-            return f'[{url}]({url})'
-    
-    # Replace URLs with markdown format
-    formatted = re.sub(url_pattern, replace_url, result)
-    
-    # Also handle markdown links that might already be in the result
-    # Look for existing markdown link patterns: [text](url)
-    markdown_link_pattern = r'\[([^\]]+)\]\((https?://[^\s\)]+)\)'
-    
-    def enhance_markdown_link(match):
-        text = match.group(1)
-        url = match.group(2)
-        
-        # If it's an image URL and the text suggests it's a link, convert to image
-        if re.search(r'\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$', url, re.IGNORECASE):
-            if 'here' in text.lower() or 'image' in text.lower() or 'view' in text.lower():
-                return f'![Generated Image]({url})'
-        
-        return match.group(0)  # Return original if no change needed
-    
-    formatted = re.sub(markdown_link_pattern, enhance_markdown_link, formatted)
-    
-    return formatted
+    return str(result)
 
 async def runCrew(prompt: str, run_id: str, manager):
     """
@@ -56,6 +22,12 @@ async def runCrew(prompt: str, run_id: str, manager):
     2. Creates CrewAI agents and tasks from the JSON
     3. Executes the crew and broadcasts events via WebSocket
     """
+    import time
+    start_time = time.time()
+    
+    # Save initial run to history
+    history.save_run(run_id, prompt, status='running')
+    
     try:
         max_wait = 10  # seconds
         wait_time = 0
@@ -117,31 +89,28 @@ async def runCrew(prompt: str, run_id: str, manager):
             "message": "✅ SpecAgent completed - crew specification ready!"
         })
         
-        # Step 2: Create and execute CrewAI crew from the spec
-        crew = await create_crew_from_spec(crew_spec, run_id, manager)
-        
-        # Step 3: Send pipeline initialization data (only agents with tasks)
+        # Step 2: Create pipeline initialization data (based on crew spec)
         agents_with_tasks = []
         pipeline_tasks = []
         
-        for task_idx, task in enumerate(crew.tasks):
-            agent_idx = next((i for i, agent in enumerate(crew.agents) if agent == task.agent), 0)
-            agent = crew.agents[agent_idx]
+        # Use the crew spec to build pipeline data before crew execution
+        for task_idx, task_spec in enumerate(crew_spec.get("tasks", [])):
+            agent_name = task_spec.get("agent")
             
             # Only add agent if not already added
-            if not any(a["role"] == agent.role for a in agents_with_tasks):
+            if not any(a["role"] == agent_name for a in agents_with_tasks):
                 agents_with_tasks.append({
                     "id": len(agents_with_tasks), 
-                    "role": agent.role, 
+                    "role": agent_name, 
                     "status": "pending"
                 })
             
             # Find the agent ID in our filtered list
-            filtered_agent_id = next((i for i, a in enumerate(agents_with_tasks) if a["role"] == agent.role), 0)
+            filtered_agent_id = next((i for i, a in enumerate(agents_with_tasks) if a["role"] == agent_name), 0)
             
             pipeline_tasks.append({
                 "id": task_idx, 
-                "description": task.description[:50] + "...", 
+                "description": task_spec.get("description", "")[:50] + "...", 
                 "agent_id": filtered_agent_id, 
                 "status": "pending"
             })
@@ -150,9 +119,24 @@ async def runCrew(prompt: str, run_id: str, manager):
             "agents": agents_with_tasks,
             "tasks": pipeline_tasks
         }
+        
+        # Step 3: Create and execute CrewAI crew from the spec
+        crew = await create_crew_from_spec(crew_spec, run_id, manager, agents_with_tasks)
+        
+
+        
         await manager.send_message(run_id, {
             "type": "pipeline-init",
             "data": pipeline_data
+        })
+        
+        # Save pipeline data to history
+        history.save_run(run_id, prompt, pipeline_data=pipeline_data, status='running')
+        
+        # Simple test to verify WebSocket is working
+        await manager.send_message(run_id, {
+            "type": "log",
+            "message": f"🔧 Pipeline data sent: {len(agents_with_tasks)} agents, {len(pipeline_tasks)} tasks"
         })
         
         # Step 4: Execute the crew with progress updates
@@ -206,6 +190,10 @@ async def runCrew(prompt: str, run_id: str, manager):
         # Format the result to ensure URLs are properly formatted as markdown
         formatted_result = format_result_for_markdown(str(result))
         
+        # Calculate duration and save completed run to history
+        duration_seconds = int(time.time() - start_time)
+        history.save_run(run_id, prompt, result=formatted_result, status='complete', duration_seconds=duration_seconds)
+        
         await manager.send_message(run_id, {
             "type": "complete",
             "message": "Crew execution completed successfully!",
@@ -213,21 +201,29 @@ async def runCrew(prompt: str, run_id: str, manager):
         })
         
     except Exception as e:
+        # Save error to history
+        duration_seconds = int(time.time() - start_time)
+        history.save_run(run_id, prompt, status='error', duration_seconds=duration_seconds)
+        
         await manager.send_message(run_id, {
             "type": "error",
             "message": f"Error in crew execution: {str(e)}"
         })
 
-async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager) -> Crew:
+async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager, pipeline_agents) -> Crew:
     """
     Creates a CrewAI Crew object from the generated specification
     """
     agents = []
     tasks = []
+    
+    # Create a shared context for tools that need it
+    run_context = RunContext()
 
     # Create agents based on spec
     for agent_spec in crew_spec.get("agents", []):
-        agent_tools = [instantiate_tool(tool_name) for tool_name in agent_spec.get("tools", [])]
+        agent_tools = []
+        agent_tools = [instantiate_tool(tool_name, context=run_context) for tool_name in agent_spec.get("tools", [])]
         
         # Log which tools the agent is using
         tool_names = agent_spec.get("tools", [])
@@ -246,19 +242,47 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
         agents.append(agent)
 
     # Create tasks with completion callbacks
-    agents_with_tasks = []
     for task_idx, task_spec in enumerate(crew_spec.get("tasks", [])):
         agent_name = task_spec.get("agent")
-
         agent = next((a for a in agents if a.role == agent_name), None)
 
         if agent:
-            # Track agents with tasks for proper ID mapping
-            if not any(a["role"] == agent.role for a in agents_with_tasks):
-                agents_with_tasks.append({"role": agent.role, "agent_obj": agent})
+            # Get tool parameters for this task
+            tool_params = task_spec.get("tool_params", [])
             
-            # Get the filtered agent ID
-            filtered_agent_id = next((i for i, a in enumerate(agents_with_tasks) if a["role"] == agent.role), 0)
+            # Create tools with context - parameters will be passed at runtime by CrewAI
+            task_specific_tools = []
+            for param_set in tool_params:
+                tool_name = param_set.get("tool")
+                if tool_name:
+                    # Instantiate the tool with context
+                    tool_instance = instantiate_tool(tool_name, context=run_context)
+                    task_specific_tools.append(tool_instance)
+            
+            # Create a task-specific agent with the tools
+            # Include tool parameters in the agent's context
+            tool_params_info = ""
+            for param_set in tool_params:
+                tool_name = param_set.get("tool")
+                if tool_name:
+                    tool_params_info += f"\n{tool_name} parameters: {json.dumps({k: v for k, v in param_set.items() if k != 'tool'})}"
+            
+            task_agent = Agent(
+                role=agent.role,
+                goal=agent.goal,
+                backstory=agent.backstory + f"\n\nAvailable tool parameters for this task:{tool_params_info}",
+                tools=task_specific_tools,  # Use the tools
+                verbose=True
+            )
+            
+            # Debug: Log the agent's backstory with tool parameters
+            await manager.send_message(run_id, {
+                "type": "log",
+                "message": f"Agent backstory for task '{task_spec.get('name')}': {task_agent.backstory}"
+            })
+
+            # Get the filtered agent ID from the pipeline agents
+            filtered_agent_id = next((i for i, a in enumerate(pipeline_agents) if a["role"] == agent.role), 0)
             
             # Create task completion callback
             def create_completion_callback(agent_role, task_desc, task_id, agent_id, run_id, manager):
@@ -280,7 +304,7 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
             task = Task(
                 description=task_spec.get("description", ""),
                 expected_output=task_spec.get("expected_output", "Task completion"),
-                agent=agent,
+                agent=task_agent,
                 callback=create_completion_callback(agent.role, task_spec.get("description", ""), task_idx, filtered_agent_id, run_id, manager)
             )
 

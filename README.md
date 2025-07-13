@@ -19,6 +19,7 @@ Agentable is a full-stack application that transforms natural language prompts i
 - **⚡ Real-time Execution**: Live WebSocket updates of agent status and progress
 - **🌐 Web Browser Automation**: Integrated Browserbase for web scraping and interaction
 - **🔍 Advanced Search**: Multiple search engines including Serper API and EXA semantic search
+- **💬 Slack Integration**: Send messages and interact with Slack channels from agent workflows
 - **📊 Modern UI**: Clean, responsive interface built with Next.js and Tailwind CSS
 - **🔧 Tool Ecosystem**: Extensible tool registry for adding new agent capabilities
 
@@ -47,6 +48,7 @@ agentable/
 - **Serper** - Web search API integration
 - **EXA** - Semantic search for high-quality research
 - **DALL-E** - AI image generation capabilities
+- **Slack API** - Real-time Slack channel integration
 - **WebSockets** - Real-time communication
 
 **Frontend:**
@@ -80,6 +82,7 @@ cp env.template .env
 # BROWSERBASE_PROJECT_ID=your_project_id_here
 # SERPER_API_KEY=your_serper_key_here
 # EXA_API_KEY=your_exa_key_here
+# SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 
 # Start the development server
 uvicorn main:app --reload --port 8000
@@ -101,11 +104,36 @@ npm run dev
 
 The frontend will be available at `http://localhost:3000`
 
-### 3. Test the Integration
+### 3. Slack Integration Setup (Optional)
+
+To enable Slack functionality:
+
+1. **Create a Slack App:**
+   - Go to [api.slack.com/apps](https://api.slack.com/apps)
+   - Click "Create New App" → "From scratch"
+   - Name your app and select your workspace
+
+2. **Configure Bot Permissions:**
+   - Go to "OAuth & Permissions" in your app settings
+   - Add these scopes under "Bot Token Scopes":
+     - `channels:read` - View basic channel information
+     - `chat:write` - Send messages as the bot
+
+3. **Install App to Workspace:**
+   - Click "Install to Workspace" 
+   - Copy the "Bot User OAuth Token" (starts with `xoxb-`)
+   - Add it to your `.env` file as `SLACK_BOT_TOKEN`
+
+4. **Add Bot to Channels:**
+   - In Slack, go to the channels where you want the bot to post
+   - Type `/invite @YourBotName` to add the bot
+
+### 4. Test the Integration
 
 1. Open `http://localhost:3000` in your browser
 2. Enter a test prompt: `"Research why Felix Lebrun is the best table tennis player"`
-3. Click "Create AI Crew" and watch real-time execution
+3. For Slack testing: `"Research the top basketball player and send summary to #general"`
+4. Click "Create AI Crew" and watch real-time execution
 
 ## 📋 API Reference
 
@@ -168,6 +196,9 @@ SERPER_API_KEY=97f540382...
 # Semantic Search
 EXA_API_KEY=your_exa_key_here
 
+# Slack Integration
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+
 # Optional: Other LLM providers
 ANTHROPIC_API_KEY=sk-ant-...
 COHERE_API_KEY=...
@@ -191,6 +222,9 @@ TOOL_REGISTRY = {
     "exa_search_tool": EXASearchTool,
     "dalle_tool": create_dalle_tool,
     "code_docs_search_tool": CodeDocsSearchTool,
+    "slack_list_channels_tool": SlackListChannelsTool,
+    "slack_resolve_channel_tool": SlackResolveChannelTool,
+    "slack_send_message_tool": SlackSendMessageTool,
 }
 ```
 
@@ -228,6 +262,12 @@ TOOL_REGISTRY = {
 "Navigate to Amazon, search for wireless headphones under $100, and extract the top 10 product names with ratings"
 ```
 
+### Slack Integration
+```
+"Research the top basketball player of 2023 and send a summary to our #general Slack channel"
+"Find the latest tech news and post updates to the team Slack channel"
+```
+
 ## 🔍 Agent Types
 
 The system automatically creates specialized agents based on task requirements:
@@ -238,6 +278,7 @@ The system automatically creates specialized agents based on task requirements:
 - **🎨 Image Creation Agent** - AI image generation using DALL-E
 - **📊 Analysis Agent** - Data processing, pattern recognition, summarization
 - **✍️ Writing Agent** - Content generation, report creation, documentation
+- **💬 Slack Communication Agent** - Channel messaging, team notifications, collaboration
 - **🧠 Coordination Agent** - Task delegation, workflow management
 
 ## 🛠️ Development

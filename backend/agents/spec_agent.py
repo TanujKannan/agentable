@@ -4,7 +4,7 @@ import openai
 import os
 import weave
 
-from tools.tool_registry import get_tool_names, instantiate_tool
+from tools.tool_registry import get_tool_names, get_tool_kwargs, instantiate_tool
 
 class SpecAgent:
     """
@@ -19,6 +19,7 @@ class SpecAgent:
         else:
             self.client = None
         self.tool_names = get_tool_names()
+        self.tool_kwargs = get_tool_kwargs()
     
     @weave.op()
     async def generate_crew_spec(self, prompt: str) -> Dict[str, Any]:
@@ -32,6 +33,18 @@ class SpecAgent:
         #     'has_openai_client': self.client is not None
         # }):
         available_tools = self.tool_names
+        kwargs = self.tool_kwargs
+
+        # Build tool parameter documentation
+        tool_params_doc = ""
+        for tool_name, tool_kwargs in kwargs.items():
+            tool_params_doc += f"\n{tool_name}:\n"
+            for param_name, param_value in tool_kwargs.items():
+                if isinstance(param_value, list):
+                    tool_params_doc += f"  - {param_name}: {', '.join(param_value)}\n"
+                else:
+                    tool_params_doc += f"  - {param_name}: {param_value}\n"
+
         system_prompt = f"""
         You are a SpecAgent that converts user requests into CrewAI task specifications.
 
@@ -129,32 +142,62 @@ class SpecAgent:
                     "role_description": "Analyzes and synthesizes research findings"
                 }}
             ],
-          "tasks": [
-            {{
-              "id": "unique_task_id",
-              "agent": "agent_name",
-              "description": "Clear task description with variables like {{prompt}}",
-              "expected_output": "What the task should produce",
-              "params": {{
-                "tool": "serper_dev_tool",
-                "limit": 50,
-                "method": "search",
-                "model": "n/a"
-              }}
-            }}
-          ]
+            "tasks": [
+                {{
+                    "name": "unique_task_name",
+                    "agent": "agent_name",
+                    "description": "Clear task description",
+                    "expected_output": "What the task should produce",
+                    "tool_params": [
+                        {{
+                            "tool": "tool_name",
+                            "param1": "value1",
+                            "param2": "value2"
+                        }}
+                    ]
+                }}
+            ]
         }}
         
-        Common agent types:
-        - DataAgent: For fetching/searching data
-        - AnalysisAgent: For analyzing data (sentiment, summarization, etc.)
-        - ResearchAgent: For research tasks using traditional search
-        - SemanticResearchAgent: For high-quality research using semantic search (EXA)
-        - WritingAgent: For content generation
-        - ImageAgent: For image generation using DALL-E
-        - WebNavigationAgent: For browsing websites and interacting with web applications
+        HOW CREWAI TOOLS WORK:
+        - CrewAI calls the tool's _run method with ALL parameters as keyword arguments
+        - The first parameter is typically the action/operation (like "send_message" for slack_tool)
+        - Additional parameters are passed as kwargs to the _run method
+        - Example: slack_tool._run(action="send_message", channel="#general", message="Hello")
         
-        Always include relevant parameters in the params object.
+        CRITICAL: Generate ACTUAL parameter values based on the user's request. NEVER use placeholders like "Your message here", "selected_channel", "#selected_channel", "[insert findings here]", or any generic terms. Use real, specific values that make sense for the specific task. 
+        
+        For Slack messages: Write the actual message content the agent should send, like "Here are the research findings on basketball: [research results from previous task]" - this tells the agent to include the research results from the previous task. 
+        
+        Agent Specialization Guidelines:
+        - Create specialized agents for different domains (research, analysis, writing, coding, presentation creation, etc.)
+        - Consider agent expertise and tool compatibility
+        - Use descriptive names that indicate the agent's role
+
+        IMPORTANT TOOL USAGE ORDER:
+        - You MUST always call "slack_list_channels_tool" before "slack_resolve_channel_tool" in a workflow, unless you are certain the channel list is already cached in context.
+        - Example correct sequence:
+            1. Use slack_list_channels_tool to cache channels.
+            2. Use slack_resolve_channel_tool to resolve a channel name to an ID and store it with an alias.
+            3. Use slack_send_message_tool to send a message using the resolved alias.
+        
+        TOOL PARAMETER EXAMPLES:
+        - slack_list_channels_tool: {{"tool": "slack_list_channels_tool"}}
+        - slack_resolve_channel_tool: {{"tool": "slack_resolve_channel_tool", "name_or_topic": "general", "alias": "main_channel"}}
+        - slack_send_message_tool: {{"tool": "slack_send_message_tool", "channel_ref": "main_channel", "message": "Your message here"}}
+        - serper_dev_tool: {{"tool": "serper_dev_tool", "query": "search query", "limit": 10}}
+        
+        CRITICAL: The "alias" parameter in slack_resolve_channel_tool creates a reference that MUST be used in the "channel_ref" parameter of slack_send_message_tool. Do NOT use the original channel name or ID in slack_send_message_tool - use the alias!
+        
+        CRITICAL ALIAS REQUIREMENT: When using slack_resolve_channel_tool, you MUST provide a meaningful alias that describes the channel's purpose. Examples:
+        - For a general channel: alias="general_channel"
+        - For an announcements channel: alias="announcements"
+        - For a team channel: alias="team_channel"
+        - For a project channel: alias="project_channel"
+        
+        NEVER use empty aliases or generic names like "channel" or "selected_channel". The alias must be descriptive and unique.
+        
+        When using tools, always include the required parameters in tool_params based on the tool parameters documentation above.
         Respond with valid JSON only.
         """
         
@@ -187,7 +230,7 @@ class SpecAgent:
             print(f"Cleaned content: {content}")
             crew_spec = json.loads(content)
 
-            print('CREW SPEC', crew_spec)
+            print('CREW SPEC', content)
             print('========================================')
             
             # Validate the structure
@@ -244,24 +287,24 @@ class SpecAgent:
             ],
             "tasks": [
                 {
-                    "id": "researchTask",
+                    "name": "researchTask",
                     "agent": "researcher",
                     "description": f"Research and gather information about: {prompt}",
                     "expected_output": "A comprehensive list of relevant information",
-                    "params": {
-                        "tool": "exa_search_tool",
-                        "limit": 10
-                    }
+                    "tool_params": [
+                        {
+                            "tool": "serper_dev_tool",
+                            "query": f"information about {prompt}",
+                            "limit": 10
+                        }
+                    ]
                 },
                 {
-                    "id": "analysisTask", 
+                    "name": "analysisTask", 
                     "agent": "analyst",
                     "description": f"Analyze the research findings for: {prompt}",
                     "expected_output": "A detailed analysis and summary",
-                    "params": {
-                        "method": "summarize",
-                        "model": "o4-mini-2025-04-16"
-                    }
+                    "tool_params": []
                 }
             ]
         }
@@ -292,6 +335,11 @@ class SpecAgent:
             'dall-e': 'dalle_tool',
             'generate_image': 'dalle_tool',
             'create_image': 'dalle_tool',
+            'slides': 'google_slides_tool',
+            'presentation': 'google_slides_tool',
+            'google_slides': 'google_slides_tool',
+            'powerpoint': 'google_slides_tool',
+            # Remove incorrect Slack mappings - let the individual tools be used as-is
             'browser': 'browserbase_tool',
             'browse': 'browserbase_tool',
             'navigate': 'browserbase_tool',

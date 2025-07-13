@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from services.orchestrator import runCrew
 from services.fly_machine_launcher import run_fly_machine
+from services.history import history
 
 # Initialize Weave for tracing with filtering
 import weave
@@ -124,3 +125,32 @@ async def health_check():
             "*",
         ]
     }
+
+@app.get("/api/history")
+async def get_history(limit: int = 10):
+    """Get recent run history"""
+    try:
+        runs = history.get_recent_runs(limit)
+        return {"runs": runs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch history: {str(e)}")
+
+@app.get("/api/history/{run_id}")
+async def get_run_by_id(run_id: str):
+    """Get a specific run by ID"""
+    try:
+        run = history.get_run_by_id(run_id)
+        if not run:
+            raise HTTPException(status_code=404, detail="Run not found")
+        return run
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch run: {str(e)}")
+
+@app.delete("/api/history")
+async def clear_history():
+    """Clear all history (useful for testing)"""
+    try:
+        history.clear_history()
+        return {"message": "History cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear history: {str(e)}")
