@@ -1,10 +1,53 @@
 import asyncio
 import json
+import re
 from typing import Dict, Any
 from agents.spec_agent import SpecAgent
 from crewai import Crew, Agent, Task
 
 from tools.tool_registry import instantiate_tool
+
+def format_result_for_markdown(result: str) -> str:
+    """
+    Format the result to ensure URLs are properly formatted as markdown links or images.
+    This ensures that image URLs are rendered as images and other URLs as clickable links.
+    """
+    # Enhanced regex to find URLs in various formats
+    url_pattern = r'(https?://[^\s\)\]]+)'
+    
+    def replace_url(match):
+        url = match.group(1)
+        # Clean up URL by removing trailing punctuation that might not be part of URL
+        url = re.sub(r'[.,;:!?)\]]*$', '', url)
+        
+        # Check if it's likely an image URL
+        if re.search(r'\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$', url, re.IGNORECASE):
+            return f'![Generated Image]({url})'
+        else:
+            # For other URLs, create a clickable link
+            return f'[{url}]({url})'
+    
+    # Replace URLs with markdown format
+    formatted = re.sub(url_pattern, replace_url, result)
+    
+    # Also handle markdown links that might already be in the result
+    # Look for existing markdown link patterns: [text](url)
+    markdown_link_pattern = r'\[([^\]]+)\]\((https?://[^\s\)]+)\)'
+    
+    def enhance_markdown_link(match):
+        text = match.group(1)
+        url = match.group(2)
+        
+        # If it's an image URL and the text suggests it's a link, convert to image
+        if re.search(r'\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$', url, re.IGNORECASE):
+            if 'here' in text.lower() or 'image' in text.lower() or 'view' in text.lower():
+                return f'![Generated Image]({url})'
+        
+        return match.group(0)  # Return original if no change needed
+    
+    formatted = re.sub(markdown_link_pattern, enhance_markdown_link, formatted)
+    
+    return formatted
 
 async def runCrew(prompt: str, run_id: str, manager):
     """
@@ -89,10 +132,13 @@ async def runCrew(prompt: str, run_id: str, manager):
             result = future.result()
         
         # Step 4: Send completion event
+        # Format the result to ensure URLs are properly formatted as markdown
+        formatted_result = format_result_for_markdown(str(result))
+        
         await manager.send_message(run_id, {
             "type": "complete",
             "message": "Crew execution completed successfully!",
-            "result": str(result)
+            "result": formatted_result
         })
         
     except Exception as e:

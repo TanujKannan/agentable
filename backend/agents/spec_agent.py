@@ -37,6 +37,14 @@ class SpecAgent:
         - Use "code_docs_search_tool" for code documentation search
         - Use "dalle_tool" for image generation tasks
         
+        CRITICAL TOOL USAGE: For image generation tasks using dalle_tool:
+        - The parameter name MUST be 'image_description' (NOT 'description')
+        - Pass the description as a DIRECT STRING value, NOT a dictionary
+        - Correct format: dalle_tool(image_description="A beautiful sunset over mountains")
+        - WRONG format: Do NOT pass dictionary objects to the tool
+        
+        Example of correct usage: dalle_tool(image_description="A monkey hanging from a tree branch")
+        
         Given a user prompt, generate a JSON specification with the following structure:
         {{
             "agents": [
@@ -50,7 +58,7 @@ class SpecAgent:
                     "name": "image_creator",
                     "config_key": "image_creator",
                     "tools": ["dalle_tool"],
-                    "role_description": "Creates images from textual descriptions using DALL-E"
+                    "role_description": "Creates images from textual descriptions using DALL-E. CRITICAL: Call dalle_tool with direct string parameter: dalle_tool(image_description='description text'). Do NOT pass dictionaries or objects."
                 }},
                 {{
                     "name": "analyst",
@@ -138,7 +146,7 @@ class SpecAgent:
                     "name": "image_creator",
                     "config_key": "image_creator",
                     "tools": ["dalle_tool"],
-                    "role_description": "Creates images from textual descriptions using DALL-E"
+                    "role_description": "Creates images from textual descriptions using DALL-E. CRITICAL: Call dalle_tool with direct string parameter: dalle_tool(image_description='description text'). Do NOT pass dictionaries or objects."
                 },
                 {
                     "name": "analyst",

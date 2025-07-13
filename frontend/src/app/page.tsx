@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 import { startRun, setupWebSocket, WebSocketEvent } from '@/lib/api';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
@@ -223,7 +224,10 @@ export default function Home() {
                       <div>
                         <h3 className="text-sm font-medium text-gray-700 mb-2">Final Result:</h3>
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-h-64 overflow-y-auto">
-                          <pre className="text-sm text-green-800 whitespace-pre-wrap">{result}</pre>
+                          <MarkdownRenderer 
+                            content={result} 
+                            className="text-green-800"
+                          />
                         </div>
                       </div>
                     </>
