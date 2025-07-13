@@ -47,6 +47,8 @@ class SpecAgent:
         - Use "browserbase_tool" for web navigation and interaction (when user wants to browse a specific website, navigate through pages, or interact with complex web applications)
         - Use "exa_search_tool" for semantic search across the internet (when you need high-quality, contextually relevant results that understand the meaning behind the query)
         
+        - You can use serper_dev_tool to find the URL of the website to browse, then use browserbase_tool to browse the website.
+
         CRITICAL: When to use Browserbase vs Regular Search:
         
         USE BROWSERBASE TOOLS when:
@@ -77,6 +79,14 @@ class SpecAgent:
         1. Use "exa_search_tool" for high-quality, semantic search when search quality is important
         2. Use "serper_dev_tool" for general web search and when you need comprehensive results
         3. Use "website_search_tool" for searching within specific website content
+        - Simple searches for information (use serper_dev_tool)
+        - General research questions (use serper_dev_tool)
+        - Finding facts, definitions, or explanations (use serper_dev_tool)
+        - Basic information gathering (use serper_dev_tool)
+        - When user just wants to know "what is..." or "how to..." (use serper_dev_tool)
+        - Large e-commerce sites that may return massive HTML content (prefer serper_dev_tool for product information)
+        
+        IMPORTANT: When using browserbase_tool, be specific about the target URL and avoid generic browsing tasks that might result in large HTML pages. Focus on targeted content extraction rather than general website browsing.
         
         CRITICAL TOOL USAGE: For image generation tasks using dalle_tool:
         - The parameter name MUST be 'image_description' (NOT 'description')
@@ -152,18 +162,30 @@ class SpecAgent:
         try:
             # Use fallback if no OpenAI client
             if not self.client:
+                print('NO OPENAI CLIENT')
                 return self._get_fallback_spec(prompt)
                 
+            print("Making OpenAI API call...")
             response = self.client.chat.completions.create(
-                model="o4-mini",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Convert this prompt to a crew specification: {prompt}"}
                 ],
-                temperature=0.1
             )
             
             content = response.choices[0].message.content
+            print(f"Raw API response: {content}")
+            
+            if content.startswith('```json'):
+                content = content[7:] 
+            if content.startswith('```'):
+                content = content[3:]  
+            if content.endswith('```'):
+                content = content[:-3]  
+            content = content.strip()
+            
+            print(f"Cleaned content: {content}")
             crew_spec = json.loads(content)
 
             print('CREW SPEC', crew_spec)
@@ -179,9 +201,12 @@ class SpecAgent:
             return crew_spec
             
         except json.JSONDecodeError as e:
+            print(f"JSON DECODE ERROR: {e}")
+            print(f"Raw content: {content}")
             # Fallback to a default specification if LLM fails
             return self._get_fallback_spec(prompt)
         except Exception as e:
+            print(f"GENERAL EXCEPTION: {e}")
             # Fallback to a default specification if LLM fails
             return self._get_fallback_spec(prompt)
     
@@ -203,7 +228,7 @@ class SpecAgent:
                     "name": "web_navigator",
                     "config_key": "web_navigator",
                     "tools": ["browserbase_tool"],
-                    "role_description": "Web navigation specialist for browsing websites, interacting with web applications, and extracting content from complex pages that require JavaScript rendering"
+                    "role_description": "Web navigation specialist for browsing specific websites, interacting with web applications, and extracting targeted content from pages that require JavaScript rendering. Focuses on targeted content extraction rather than general website browsing to avoid context length issues."
                 },
                 {
                     "name": "image_creator",

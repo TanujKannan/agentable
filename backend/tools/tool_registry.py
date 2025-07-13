@@ -11,6 +11,22 @@ def create_dalle_tool():
         n=1                    # Generate 1 image (dall-e-3 only supports n=1)
     )
 
+# Configure Browserbase tool with API credentials
+def create_browserbase_tool():
+    api_key = os.getenv("BROWSERBASE_API_KEY")
+    project_id = os.getenv("BROWSERBASE_PROJECT_ID")
+    
+    if not api_key or not project_id:
+        raise ValueError(
+            "Browserbase credentials not configured. Please set BROWSERBASE_API_KEY and BROWSERBASE_PROJECT_ID environment variables. "
+            "Get your credentials from https://browserbase.com/"
+        )
+    
+    return BrowserbaseLoadTool(
+        api_key=api_key,
+        project_id=project_id
+    )
+
 TOOL_REGISTRY = {
     "website_search_tool": WebsiteSearchTool,
     "serper_dev_tool": SerperDevTool,
@@ -30,7 +46,7 @@ def instantiate_tool(tool_name: str, **kwargs) -> Any:
     if tool_name == "dalle_tool":
         return tool_class()
     
-    # Handle browserbase tool - instantiate normally
+    # Handle browserbase tool specially since it's a function
     if tool_name == "browserbase_tool":
         return tool_class(**kwargs)
     
