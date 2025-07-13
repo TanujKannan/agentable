@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import CloudTaskExecutor from '@/components/ui/sandbox';
@@ -14,26 +14,20 @@ export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [shouldRunSandbox, setShouldRunSandbox] = useState(false);
-  const [showSandbox, setShowSandbox] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || status === 'running') return;
 
-    // Show sandbox and trigger execution
-    setShowSandbox(true);
+    // Start execution
+    setHasStarted(true);
     setShouldRunSandbox(false);
     setTimeout(() => setShouldRunSandbox(true), 100);
   };
 
   const handleSandboxStatusChange = (newStatus: Status) => {
     setStatus(newStatus);
-  };
-
-  const handleCloseSandbox = () => {
-    setShowSandbox(false);
-    setShouldRunSandbox(false);
-    setStatus('idle');
   };
 
   const getStatusColor = (status: Status) => {
@@ -49,22 +43,12 @@ export default function Home() {
     setPrompt('');
     setStatus('idle');
     setShouldRunSandbox(false);
-    setShowSandbox(false);
+    setHasStarted(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Conditionally render sandbox when showSandbox is true */}
-      {showSandbox && (
-        <CloudTaskExecutor 
-          prompt={prompt} 
-          shouldRun={shouldRunSandbox}
-          onStatusChange={handleSandboxStatusChange}
-          onClose={handleCloseSandbox}
-        />
-      )}
-      
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="text-center mb-8 pt-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
@@ -82,16 +66,6 @@ export default function Home() {
               {status === 'complete' && 'Task Complete'}
               {status === 'error' && 'Error Occurred'}
             </Badge>
-            {!showSandbox && (status === 'running' || status === 'complete' || status === 'error') && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSandbox(true)}
-                className="ml-2 text-xs"
-              >
-                View Execution
-              </Button>
-            )}
           </div>
         </div>
 
@@ -152,7 +126,32 @@ export default function Home() {
           <div className="mt-8 text-center text-gray-600">
             <p className="text-lg">Enter a task above to get started with your AI crew</p>
           </div>
-        )}
+
+          {/* Sandbox/Execution Section */}
+          <div>
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-medium text-gray-800">
+                  Live Execution
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                {hasStarted ? (
+                  <CloudTaskExecutor 
+                    prompt={prompt} 
+                    shouldRun={shouldRunSandbox}
+                    onStatusChange={handleSandboxStatusChange}
+                    onClose={() => {}}
+                  />
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-gray-500">
+                    <p>Start a task to see the execution here...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

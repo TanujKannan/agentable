@@ -60,7 +60,6 @@ async def run_task(request: RunRequest, background_tasks: BackgroundTasks):
     """Start a crew execution task and return the task ID."""
     run_id = str(uuid.uuid4())
     
-    background_tasks.add_task(run_fly_machine, request.prompt, run_id, manager)
     background_tasks.add_task(runCrew, request.prompt, run_id, manager)
     
     return {"taskId": run_id}
