@@ -33,4 +33,6 @@ echo "🌐 Starting server on http://localhost:8000"
 echo "📱 Frontend should run on http://localhost:3000"
 echo ""
 
-uvicorn main:app --reload --port 8000
+# Use PORT environment variable if available (for production), otherwise default to 8000
+PORT=${PORT:-8000}
+uvicorn main:app --reload --port $PORT

@@ -2,7 +2,7 @@ from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, D
 from typing import Any
 import os
 
-# Configure DallE tool with dall-e-3 model
+# Configure DallE tool with dall-e-3 model and input truncation
 def create_dalle_tool():
     return DallETool(
         model="dall-e-3",      # More reliable model

@@ -65,7 +65,6 @@ class SpecAgent:
         - General research questions (use serper_dev_tool or exa_search_tool)
         - Finding facts, definitions, or explanations (use serper_dev_tool or exa_search_tool)
         - Basic information gathering (use serper_dev_tool or exa_search_tool)
-        - When user just wants to know "what is..." or "how to..." (use serper_dev_tool or exa_search_tool)
         
         WHEN TO USE EXA SEARCH TOOL:
         - Use "exa_search_tool" when you need semantic, contextually-aware search results
