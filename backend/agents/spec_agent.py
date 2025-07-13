@@ -31,6 +31,12 @@ class SpecAgent:
         
         IMPORTANT: You must use the EXACT tool names from the list above. Do not use generic names like 'search' or 'llm'.
         
+        Tool Usage Guidelines:
+        - Use "serper_dev_tool" for web search and research
+        - Use "website_search_tool" for website content search
+        - Use "code_docs_search_tool" for code documentation search
+        - Use "dalle_tool" for image generation tasks
+        
         Given a user prompt, generate a JSON specification with the following structure:
         {{
             "agents": [
@@ -39,6 +45,12 @@ class SpecAgent:
                     "config_key": "researcher",
                     "tools": ["serper_dev_tool", "website_search_tool"],
                     "role_description": "Research specialist for gathering information"
+                }},
+                {{
+                    "name": "image_creator",
+                    "config_key": "image_creator",
+                    "tools": ["dalle_tool"],
+                    "role_description": "Creates images from textual descriptions using DALL-E"
                 }},
                 {{
                     "name": "analyst",
@@ -68,6 +80,7 @@ class SpecAgent:
         - AnalysisAgent: For analyzing data (sentiment, summarization, etc.)
         - ResearchAgent: For research tasks
         - WritingAgent: For content generation
+        - ImageAgent: For image generation using DALL-E
         
         Always include relevant parameters in the params object.
         Respond with valid JSON only.
@@ -122,6 +135,12 @@ class SpecAgent:
                     "role_description": "Research specialist for gathering information"
                 },
                 {
+                    "name": "image_creator",
+                    "config_key": "image_creator",
+                    "tools": ["dalle_tool"],
+                    "role_description": "Creates images from textual descriptions using DALL-E"
+                },
+                {
                     "name": "analyst",
                     "config_key": "analyst",
                     "tools": [],
@@ -160,6 +179,12 @@ class SpecAgent:
             'llm': 'website_search_tool',
             'sentiment': 'website_search_tool',
             'summarize': 'website_search_tool',
+            'image': 'dalle_tool',
+            'image_generation': 'dalle_tool',
+            'dalle': 'dalle_tool',
+            'dall-e': 'dalle_tool',
+            'generate_image': 'dalle_tool',
+            'create_image': 'dalle_tool',
         }
         
         # Fix agent tool names
