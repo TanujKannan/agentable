@@ -1,0 +1,37 @@
+# fly.toml app configuration file generated for agentable-frontend on 2025-07-12T18:14:52-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'agentable-frontend'
+primary_region = 'sjc'
+
+[build]
+  [build.args]
+    NEXT_PUBLIC_BACKEND_URL = "https://backend-holy-violet-2759.fly.dev"
+  [build.env]
+    NEXT_PUBLIC_BACKEND_URL = "https://backend-holy-violet-2759.fly.dev"
+
+[env]
+  NEXT_PUBLIC_BACKEND_URL = "https://backend-holy-violet-2759.fly.dev"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 2
+  processes = ['app']
+
+[checks]
+  [checks.health]
+    port = 3000
+    type = "http"
+    interval = "15s"
+    timeout = "10s"
+    path = "/"
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

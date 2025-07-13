@@ -54,6 +54,10 @@ def instantiate_tool(tool_name: str, context=None, **kwargs) -> Any:
     if tool_name == "dalle_tool":
         return tool_class()
     
+    # Handle browserbase tool - instantiate normally
+    if tool_name == "browserbase_tool":
+        return tool_class(**kwargs)
+    
     # Pass context to tools that need it
     if context and tool_name in ["slack_list_channels_tool", "slack_resolve_channel_tool", "slack_send_message_tool"]:
         return tool_class(context=context, **kwargs)

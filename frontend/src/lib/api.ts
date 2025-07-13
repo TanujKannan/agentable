@@ -1,7 +1,7 @@
 // Simple API integration for Agentable backend
 // No external dependencies - uses native fetch and WebSocket
 
-export type EventType = 'agent-update' | 'log' | 'complete' | 'error';
+export type EventType = 'agent-update' | 'log' | 'complete' | 'error' | 'pipeline-init';
 
 export interface RunResponse {
   runId: string;
@@ -12,11 +12,36 @@ export interface WebSocketEvent {
   message: string;
   result?: string;
   data?: unknown;
+  agent_id?: number;
+  task_id?: number;
+  agent_status?: string;
+  task_status?: string;
+  pipeline_status?: string;
 }
+
+// Get the backend URL from environment variables
+const getBackendUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.NEXT_PUBLIC_BACKEND_URL) {
+      throw new Error("NEXT_PUBLIC_BACKEND_URL is not set in production");
+    }
+    return process.env.NEXT_PUBLIC_BACKEND_URL;
+  }
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+};
+
+const getWebSocketUrl = () => {
+  const backendUrl = getBackendUrl();
+  return backendUrl.replace(/^http/, 'ws');
+};
 
 // Start a new crew run
 export const startRun = async (prompt: string): Promise<RunResponse> => {
-  const response = await fetch('http://localhost:8000/api/run', {
+    const backendUrl = getBackendUrl();
+    if (!backendUrl) {
+        throw new Error("Backend URL is not configured");
+    }
+  const response = await fetch(`${backendUrl}/api/run`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -33,7 +58,7 @@ export const startRun = async (prompt: string): Promise<RunResponse> => {
 
 // Create WebSocket connection for real-time updates
 export const createWebSocket = (runId: string): WebSocket => {
-  const ws = new WebSocket(`ws://localhost:8000/api/ws/${runId}`);
+  const ws = new WebSocket(`${getWebSocketUrl()}/api/ws/${runId}`);
   return ws;
 };
 
