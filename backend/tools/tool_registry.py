@@ -1,5 +1,5 @@
 from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, BrowserbaseLoadTool, EXASearchTool, ZapierActionTools, BrowserbaseLoadTool
-from tools.google_slides_tool import GoogleSlidesTool
+# from tools.google_slides_tool import GoogleSlidesTool  # Commented out due to missing Google API dependencies
 from tools.slack_resolve_channel_tool import SlackResolveChannelTool
 from tools.slack_list_channels_tool import SlackListChannelsTool
 from tools.slack_send_message_tool import SlackSendMessageTool
@@ -39,7 +39,8 @@ TOOL_REGISTRY = {
     "slack_list_channels_tool": SlackListChannelsTool,
     "slack_resolve_channel_tool": SlackResolveChannelTool,
     "slack_send_message_tool": SlackSendMessageTool,
-    "browserbase_tool": BrowserbaseLoadTool
+    "browserbase_tool": BrowserbaseLoadTool,
+    "exa_search_tool": EXASearchTool,  # Add EXA semantic search tool
 }
 
 KWARGS_REGISTRY = {
@@ -66,12 +67,6 @@ KWARGS_REGISTRY = {
 }
 
 def instantiate_tool(tool_name: str, context=None, **kwargs) -> Any:
-    "dalle_tool": create_dalle_tool,  # Add DallE tool
-    "browserbase_tool": BrowserbaseLoadTool,  # Add Browserbase navigation tool
-    "exa_search_tool": EXASearchTool,  # Add EXA semantic search tool
-}
-
-def instantiate_tool(tool_name: str, **kwargs) -> Any:
     if tool_name not in TOOL_REGISTRY:
         raise KeyError(f"Tool '{tool_name}' not found in registry. Available tools: {list(TOOL_REGISTRY.keys())}")
     

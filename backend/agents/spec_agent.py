@@ -3,7 +3,6 @@ from typing import Dict, Any
 import openai
 import os
 import weave
-import weave
 
 from tools.tool_registry import get_tool_names, get_tool_kwargs, instantiate_tool
 
@@ -22,7 +21,6 @@ class SpecAgent:
         self.tool_names = get_tool_names()
         self.tool_kwargs = get_tool_kwargs()
     
-    @weave.op()
     @weave.op()
     async def generate_crew_spec(self, prompt: str) -> Dict[str, Any]:
         """
@@ -55,7 +53,6 @@ class SpecAgent:
         IMPORTANT: You must use the EXACT tool names from the list above. Do not use generic names like 'search' or 'llm'.
         
         Tool Usage Guidelines:
-        - Use "serper_dev_tool" for web search and research (general searches, finding information)
         - Use "serper_dev_tool" for web search and research (general searches, finding information)
         - Use "website_search_tool" for website content search
         - Use "code_docs_search_tool" for code documentation search
@@ -169,7 +166,9 @@ class SpecAgent:
         - Additional parameters are passed as kwargs to the _run method
         - Example: slack_tool._run(action="send_message", channel="#general", message="Hello")
         
-        CRITICAL: Generate ACTUAL parameter values based on the user's request. NEVER use placeholders like "Your message here", "selected_channel", "#selected_channel", or any generic terms. Use real, specific values that make sense for the specific task. 
+        CRITICAL: Generate ACTUAL parameter values based on the user's request. NEVER use placeholders like "Your message here", "selected_channel", "#selected_channel", "[insert findings here]", or any generic terms. Use real, specific values that make sense for the specific task. 
+        
+        For Slack messages: Write the actual message content the agent should send, like "Here are the research findings on basketball: [research results from previous task]" - this tells the agent to include the research results from the previous task. 
         
         Agent Specialization Guidelines:
         - Create specialized agents for different domains (research, analysis, writing, coding, presentation creation, etc.)
@@ -255,12 +254,10 @@ class SpecAgent:
             return self._get_fallback_spec(prompt)
     
     # @weave.op()  # Disabled due to serialization issues
-    # @weave.op()  # Disabled due to serialization issues
     def _get_fallback_spec(self, prompt: str) -> Dict[str, Any]:
         """
         Fallback specification when LLM fails
         """
-        # with weave.attributes({'fallback_reason': 'LLM_unavailable_or_failed'}):
         # with weave.attributes({'fallback_reason': 'LLM_unavailable_or_failed'}):
         return {
             "agents": [
@@ -305,7 +302,7 @@ class SpecAgent:
                 },
                 {
                     "name": "analysisTask", 
-                    "agent": "researcher",
+                    "agent": "analyst",
                     "description": f"Analyze the research findings for: {prompt}",
                     "expected_output": "A detailed analysis and summary",
                     "tool_params": []
@@ -344,16 +341,6 @@ class SpecAgent:
             'google_slides': 'google_slides_tool',
             'powerpoint': 'google_slides_tool',
             # Remove incorrect Slack mappings - let the individual tools be used as-is
-            'browser': 'browserbase_tool',
-            'browse': 'browserbase_tool',
-            'navigate': 'browserbase_tool',
-            'browserbase': 'browserbase_tool',
-            'web_navigation': 'browserbase_tool',
-            'web_browse': 'browserbase_tool',
-            'click': 'browserbase_tool',
-            'interact': 'browserbase_tool',
-            'form_fill': 'browserbase_tool',
-            'screenshot': 'browserbase_tool',
             'browser': 'browserbase_tool',
             'browse': 'browserbase_tool',
             'navigate': 'browserbase_tool',

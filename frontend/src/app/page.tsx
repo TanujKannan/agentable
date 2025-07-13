@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import Image from 'next/image';
 import { startRun, setupWebSocket, WebSocketEvent } from '@/lib/api';
 import ChatInterface from '@/components/ChatInterface';
 import OutputPanel from '@/components/OutputPanel';
@@ -10,13 +9,6 @@ import LandingChatInput from '@/components/LandingChatInput';
 import { PipelineData } from '@/lib/types';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
-
-interface ChatMessage {
-  id: string;
-  content: string;
-  type: 'user' | 'system' | 'loading';
-  timestamp: Date;
-}
 
 interface ChatMessage {
   id: string;
