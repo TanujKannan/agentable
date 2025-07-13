@@ -62,7 +62,7 @@ async def run_task(request: RunRequest, background_tasks: BackgroundTasks):
     
     background_tasks.add_task(runCrew, request.prompt, run_id, manager)
     
-    return {"taskId": run_id}
+    return {"runId": run_id}
 
 @app.websocket("/api/ws/{task_id}")
 async def stream_logs(websocket: WebSocket, task_id: str):
