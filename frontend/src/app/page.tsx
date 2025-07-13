@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { startRun, setupWebSocket, WebSocketEvent } from '@/lib/api';
 import ChatInterface from '@/components/ChatInterface';
 import OutputPanel from '@/components/OutputPanel';
+import { PipelineData } from '@/lib/types';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
 
@@ -20,8 +22,8 @@ export default function Home() {
   const [logs, setLogs] = useState<string[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [pipelineData, setPipelineData] = useState<any>(null);
-  const [agentUpdates, setAgentUpdates] = useState<any[]>([]);
+  const [pipelineData, setPipelineData] = useState<PipelineData | null>(null);
+  const [agentUpdates, setAgentUpdates] = useState<WebSocketEvent[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Cleanup WebSocket on unmount
@@ -97,7 +99,7 @@ export default function Home() {
         setLogs(prev => [...prev, event.message]);
         break;
       case 'pipeline-init':
-        setPipelineData(event.data);
+        setPipelineData(event.data as PipelineData);
         break;
       case 'agent-update':
         setLogs(prev => [...prev, `Agent Update: ${event.message}`]);
@@ -182,9 +184,11 @@ export default function Home() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img 
+            <Image 
               src="/agentablelogo.png" 
               alt="Agentable" 
+              width={32}
+              height={32}
               className="h-8 w-auto"
             />
             <div>

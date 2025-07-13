@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Terminal, FileText, GitBranch } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import PipelineVisualization from './PipelineVisualization';
+import CloudTaskExecutor from './ui/sandbox';
+import { PipelineData } from '@/lib/types';
+import { WebSocketEvent } from '@/lib/api';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
 
@@ -15,13 +16,14 @@ interface OutputPanelProps {
   result: string | null;
   status: Status;
   runId: string | null;
-  pipelineData: any;
-  agentUpdates: any[];
+  pipelineData: PipelineData | null;
+  agentUpdates: WebSocketEvent[];
+  prompt?: string;
 }
 
 type TabType = 'logs' | 'output' | 'pipeline';
 
-export default function OutputPanel({ logs, result, status, runId, pipelineData, agentUpdates }: OutputPanelProps) {
+export default function OutputPanel({ logs, result, status, runId, pipelineData, agentUpdates, prompt }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('pipeline');
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -108,11 +110,6 @@ export default function OutputPanel({ logs, result, status, runId, pipelineData,
           >
             <Terminal className="h-4 w-4" />
             Logs
-            {logs.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {logs.length}
-              </Badge>
-            )}
           </button>
           <button
             onClick={() => setActiveTab('output')}
@@ -145,28 +142,14 @@ export default function OutputPanel({ logs, result, status, runId, pipelineData,
         )}
 
         {activeTab === 'logs' && (
-          <div className="h-full p-4">
-            <div className="bg-gray-900 rounded-lg p-4 h-full overflow-y-auto">
-              {logs.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-400 text-sm text-center">
-                    Logs will appear here when your AI crew starts working...
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {logs.map((log, index) => (
-                    <div key={index} className="text-green-400 text-sm font-mono break-words">
-                      <span className="text-gray-500 mr-2">
-                        [{new Date().toLocaleTimeString()}]
-                      </span>
-                      {log}
-                    </div>
-                  ))}
-                  <div ref={logsEndRef} />
-                </div>
-              )}
-            </div>
+          <div className="h-full">
+            <CloudTaskExecutor
+              embedded={true}
+              runId={runId}
+              prompt={prompt}
+              height="100%"
+              externalLogs={logs}
+            />
           </div>
         )}
 
