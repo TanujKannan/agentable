@@ -85,25 +85,35 @@ class SpecAgent:
         - Additional parameters are passed as kwargs to the _run method
         - Example: slack_tool._run(action="send_message", channel="#general", message="Hello")
         
-        TOOL PARAMETER EXAMPLES:
-        - slack_tool: {{"tool": "slack_tool", "action": "send_message", "channel": "#general", "message": "Your message here"}}
-        - serper_dev_tool: {{"tool": "serper_dev_tool", "query": "search query", "limit": 10}}
-        
         CRITICAL: Generate ACTUAL parameter values based on the user's request. NEVER use placeholders like "Your message here", "selected_channel", "#selected_channel", or any generic terms. Use real, specific values that make sense for the specific task. 
-        
-        For Slack channels, ALWAYS use real channel names like "#general", "#announcements", "#random", "#help", "#team", "#project", etc. If you don't know the exact channel, use "#general" as it's the most common default channel.
-        
-        For messages, write the actual message content that should be sent, not placeholder text.
-        
-        EXAMPLES OF GOOD vs BAD:
-        ❌ BAD: "channel": "selected_channel", "message": "Your message here"
-        ❌ BAD: "channel": "#selected_channel", "message": "Your message here"  
-        ✅ GOOD: "channel": "#general", "message": "Let's schedule a meeting on July 12. Please confirm availability."
         
         Agent Specialization Guidelines:
         - Create specialized agents for different domains (research, analysis, writing, coding, presentation creation, etc.)
         - Consider agent expertise and tool compatibility
         - Use descriptive names that indicate the agent's role
+
+        IMPORTANT TOOL USAGE ORDER:
+        - You MUST always call "slack_list_channels_tool" before "slack_resolve_channel_tool" in a workflow, unless you are certain the channel list is already cached in context.
+        - Example correct sequence:
+            1. Use slack_list_channels_tool to cache channels.
+            2. Use slack_resolve_channel_tool to resolve a channel name to an ID and store it with an alias.
+            3. Use slack_send_message_tool to send a message using the resolved alias.
+        
+        TOOL PARAMETER EXAMPLES:
+        - slack_list_channels_tool: {{"tool": "slack_list_channels_tool"}}
+        - slack_resolve_channel_tool: {{"tool": "slack_resolve_channel_tool", "name_or_topic": "general", "alias": "main_channel"}}
+        - slack_send_message_tool: {{"tool": "slack_send_message_tool", "channel_ref": "main_channel", "message": "Your message here"}}
+        - serper_dev_tool: {{"tool": "serper_dev_tool", "query": "search query", "limit": 10}}
+        
+        CRITICAL: The "alias" parameter in slack_resolve_channel_tool creates a reference that MUST be used in the "channel_ref" parameter of slack_send_message_tool. Do NOT use the original channel name or ID in slack_send_message_tool - use the alias!
+        
+        CRITICAL ALIAS REQUIREMENT: When using slack_resolve_channel_tool, you MUST provide a meaningful alias that describes the channel's purpose. Examples:
+        - For a general channel: alias="general_channel"
+        - For an announcements channel: alias="announcements"
+        - For a team channel: alias="team_channel"
+        - For a project channel: alias="project_channel"
+        
+        NEVER use empty aliases or generic names like "channel" or "selected_channel". The alias must be descriptive and unique.
         
         When using tools, always include the required parameters in tool_params based on the tool parameters documentation above.
         Respond with valid JSON only.
@@ -195,6 +205,7 @@ class SpecAgent:
             'presentation': 'google_slides_tool',
             'google_slides': 'google_slides_tool',
             'powerpoint': 'google_slides_tool',
+            # Remove incorrect Slack mappings - let the individual tools be used as-is
         }
         
         # Fix agent tool names

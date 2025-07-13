@@ -1,6 +1,8 @@
 from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, ZapierActionTools
 from tools.google_slides_tool import GoogleSlidesTool
-from tools.slack_tool import SlackTool
+from tools.slack_resolve_channel_tool import SlackResolveChannelTool
+from tools.slack_list_channels_tool import SlackListChannelsTool
+from tools.slack_send_message_tool import SlackSendMessageTool
 from typing import Any
 import os
 
@@ -14,12 +16,13 @@ def create_dalle_tool():
     )
 
 TOOL_REGISTRY = {
-    # "website_search_tool": WebsiteSearchTool,
+    "website_search_tool": WebsiteSearchTool,
     "serper_dev_tool": SerperDevTool,
-    # "code_docs_search_tool": CodeDocsSearchTool,
-    # "dalle_tool": create_dalle_tool,  # Add DallE tool
-    # "google_slides_tool": GoogleSlidesTool,
-    "slack_tool": SlackTool,
+    "code_docs_search_tool": CodeDocsSearchTool,
+    "dalle_tool": create_dalle_tool,  # Add DallE tool
+    "slack_list_channels_tool": SlackListChannelsTool,
+    "slack_resolve_channel_tool": SlackResolveChannelTool,
+    "slack_send_message_tool": SlackSendMessageTool
 }
 
 KWARGS_REGISTRY = {
@@ -27,22 +30,21 @@ KWARGS_REGISTRY = {
         "query": "Search query based on the task",
         "limit": "Number of results (default: 10)"
     },
-    "slack_tool": {
-        "action": [
-            "send_message",
-            "send_dm", 
-            "get_channels",
-            "get_users",
-            "find_channel",
-            "find_user",
-            "send_formatted_message"
-        ],
-        "channel": "Appropriate channel based on the task",
-        "message": "Appropriate message based on the task"
-    }
+
+    "slack_send_message_tool": {
+        "channel_ref": "Alias of the Slack channel to send the message to",
+        "message": "The text message to send"
+    },
+    "slack_resolve_channel_tool": {
+        "name_or_topic": "Human-friendly channel name or topic to match",
+        "alias": "Alias to use for referencing the channel later"
+    },
+    "slack_list_channels_tool": {
+        # no inputs needed
+    },
 }
 
-def instantiate_tool(tool_name: str, **kwargs) -> Any:
+def instantiate_tool(tool_name: str, context=None, **kwargs) -> Any:
     if tool_name not in TOOL_REGISTRY:
         raise KeyError(f"Tool '{tool_name}' not found in registry. Available tools: {list(TOOL_REGISTRY.keys())}")
     
@@ -51,6 +53,10 @@ def instantiate_tool(tool_name: str, **kwargs) -> Any:
     # Handle DallE tool specially since it's a function
     if tool_name == "dalle_tool":
         return tool_class()
+    
+    # Pass context to tools that need it
+    if context and tool_name in ["slack_list_channels_tool", "slack_resolve_channel_tool", "slack_send_message_tool"]:
+        return tool_class(context=context, **kwargs)
     
     return tool_class(**kwargs)
 
