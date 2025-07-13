@@ -84,6 +84,9 @@ class SpecAgent:
         - WRONG format: Do NOT pass dictionary objects to the tool
         
         Example of correct usage: dalle_tool(image_description="A monkey hanging from a tree branch")
+
+        You have complete flexibility to create as many agents and tasks as needed to accomplish the user's request. 
+        Think like a project manager - break down complex requests into logical steps and assign specialized agents.
         
         Given a user prompt, generate a JSON specification with the following structure:
         {{
@@ -157,7 +160,7 @@ class SpecAgent:
                 return self._get_fallback_spec(prompt)
                 
             response = self.client.chat.completions.create(
-                model="o4-mini",
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Convert this prompt to a crew specification: {prompt}"}
@@ -210,20 +213,20 @@ class SpecAgent:
                     "agent": "researcher",
                     "description": f"Research and gather information about: {prompt}",
                     "expected_output": "A comprehensive list of relevant information",
-                    "tool_params": {
-                        "tool": "serper_dev_tool",
-                        "limit": 10
-                    }
+                    "tool_params": [
+                        {
+                            "tool": "serper_dev_tool",
+                            "query": f"information about {prompt}",
+                            "limit": 10
+                        }
+                    ]
                 },
                 {
-                    "id": "analysisTask", 
-                    "agent": "analyst",
+                    "name": "analysisTask", 
+                    "agent": "researcher",
                     "description": f"Analyze the research findings for: {prompt}",
                     "expected_output": "A detailed analysis and summary",
-                    "params": {
-                        "method": "summarize",
-                        "model": "gpt-3.5-turbo"
-                    }
+                    "tool_params": []
                 }
             ]
         }

@@ -1,4 +1,4 @@
-from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, ZapierActionTools
+from crewai_tools import WebsiteSearchTool, SerperDevTool, CodeDocsSearchTool, DallETool, ZapierActionTools, BrowserbaseLoadTool
 from tools.google_slides_tool import GoogleSlidesTool
 from tools.slack_resolve_channel_tool import SlackResolveChannelTool
 from tools.slack_list_channels_tool import SlackListChannelsTool
@@ -22,7 +22,8 @@ TOOL_REGISTRY = {
     "dalle_tool": create_dalle_tool,  # Add DallE tool
     "slack_list_channels_tool": SlackListChannelsTool,
     "slack_resolve_channel_tool": SlackResolveChannelTool,
-    "slack_send_message_tool": SlackSendMessageTool
+    "slack_send_message_tool": SlackSendMessageTool,
+    "browserbase_tool": BrowserbaseLoadTool
 }
 
 KWARGS_REGISTRY = {
@@ -41,6 +42,10 @@ KWARGS_REGISTRY = {
     },
     "slack_list_channels_tool": {
         # no inputs needed
+    },
+    "browserbase_tool": {
+        "url": "URL to navigate to",
+        "action": "Action to perform (load, click, scroll, etc.)"
     },
 }
 

@@ -151,9 +151,18 @@ async def runCrew(prompt: str, run_id: str, manager):
             "agents": agents_with_tasks,
             "tasks": pipeline_tasks
         }
+        
+
+        
         await manager.send_message(run_id, {
             "type": "pipeline-init",
             "data": pipeline_data
+        })
+        
+        # Simple test to verify WebSocket is working
+        await manager.send_message(run_id, {
+            "type": "log",
+            "message": f"🔧 Pipeline data sent: {len(agents_with_tasks)} agents, {len(pipeline_tasks)} tasks"
         })
         
         # Step 4: Execute the crew with progress updates
@@ -251,7 +260,7 @@ async def create_crew_from_spec(crew_spec: Dict[str, Any], run_id: str, manager)
         agents.append(agent)
 
     # Create tasks with completion callbacks
-    tasks_with_tasks = []
+    agents_with_tasks = []
     for task_idx, task_spec in enumerate(crew_spec.get("tasks", [])):
         agent_name = task_spec.get("agent")
         agent = next((a for a in agents if a.role == agent_name), None)
