@@ -152,6 +152,7 @@ To enable cloud execution:
 ### Environment Variables
 - `OPENAI_API_KEY`: Required for SpecAgent LLM functionality and DALL-E image generation
 - `SERPER_API_KEY`: Required for web search functionality (get free key at https://serper.dev)
+- `EXA_API_KEY`: Required for semantic search functionality (get free key at https://exa.ai)
 - `PORT`: Server port (default: 8000)
 
 ### CORS Settings
@@ -204,6 +205,7 @@ The system supports various agent types:
 The system includes the following tools that agents can use:
 
 ### Search Tools
+- **exa_search_tool**: Semantic search across the internet using EXA API (high-quality, contextually relevant results)
 - **serper_dev_tool**: Web search and research using Serper API
 - **website_search_tool**: Website content search and analysis
 - **code_docs_search_tool**: Code documentation search
@@ -221,6 +223,8 @@ The system includes the following tools that agents can use:
 **Text-based tasks:**
 ```
 "Research the latest AI trends and create a summary report"
+"Find high-quality research papers about machine learning interpretability"
+"Conduct semantic search for recent developments in quantum computing"
 ```
 
 **Image generation tasks:**
