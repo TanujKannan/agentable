@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { startRun, setupWebSocket, WebSocketEvent } from '@/lib/api';
 import ChatInterface from '@/components/ChatInterface';
 import OutputPanel from '@/components/OutputPanel';
+import LandingChatInput from '@/components/LandingChatInput';
 import { PipelineData } from '@/lib/types';
 
 type Status = 'idle' | 'running' | 'complete' | 'error';
@@ -24,6 +25,8 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pipelineData, setPipelineData] = useState<PipelineData | null>(null);
   const [agentUpdates, setAgentUpdates] = useState<WebSocketEvent[]>([]);
+  const [isLandingMode, setIsLandingMode] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   // Cleanup WebSocket on unmount
@@ -38,6 +41,76 @@ export default function Home() {
   const handleChatSubmit = async (message: string) => {
     if (status === 'running') return;
 
+    // If we're in landing mode, handle the transition
+    if (isLandingMode) {
+      // Start transition
+      setIsTransitioning(true);
+      
+      // Add user message to chat
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content: message,
+        type: 'user',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+
+      // Add loading message
+      const loadingMessage: ChatMessage = {
+        id: Date.now().toString() + '_loading',
+        content: '',
+        type: 'loading',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, loadingMessage]);
+      
+      // After transition, switch to two-panel view and start the run
+      setTimeout(async () => {
+        setIsLandingMode(false);
+        setIsTransitioning(false);
+        
+        // Now start the actual run
+        try {
+          setStatus('running');
+          setLogs([]);
+          setResult(null);
+          setPipelineData(null);
+          setAgentUpdates([]);
+          
+          // Start the crew run
+          const { runId: newRunId } = await startRun(message);
+          setRunId(newRunId);
+          
+          // Set up WebSocket connection
+          wsRef.current = setupWebSocket(
+            newRunId,
+            handleWebSocketEvent,
+            handleWebSocketError,
+            handleWebSocketClose
+          );
+          
+        } catch (error) {
+          console.error('Failed to start run:', error);
+          setStatus('error');
+          // Remove loading message and add error message to chat
+          setMessages(prev => {
+            const filtered = prev.filter(msg => msg.type !== 'loading');
+            const errorMessage: ChatMessage = {
+              id: Date.now().toString() + '_error',
+              content: 'Failed to start task ✗',
+              type: 'system',
+              timestamp: new Date(),
+            };
+            return [...filtered, errorMessage];
+          });
+          setLogs(prev => [...prev, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`]);
+        }
+      }, 800);
+      
+      return;
+    }
+
+    // If we're already in two-panel mode, handle normally
     // Add user message to chat
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -178,21 +251,83 @@ export default function Home() {
     }
   };
 
+  if (isLandingMode || isTransitioning) {
+    return (
+      <div className="h-screen relative overflow-hidden">
+        {/* Gradient Background */}
+        <div className={`absolute inset-0 bg-gradient-to-br from-[#1F3A93] via-[#17A589] to-[#F5B041] transition-all duration-800 ${
+          isTransitioning ? 'opacity-0' : 'opacity-100'
+        }`}>
+          {/* Animated background elements */}
+          <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-white/15 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        </div>
+
+        {/* White background for transition */}
+        <div className={`absolute inset-0 bg-[#F7F9FA] transition-all duration-800 ${
+          isTransitioning ? 'opacity-100' : 'opacity-0'
+        }`}></div>
+
+        {/* Content */}
+        <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 -mt-16">
+          {/* Logo and Header */}
+          <div className={`mb-6 text-center transition-all duration-800 ${
+            isTransitioning ? 'opacity-0 scale-95 -translate-y-8' : 'opacity-100 scale-100 translate-y-0'
+          }`}>
+            <div className="flex items-center justify-center">
+              <Image 
+                src="/agentablelogowhitetext.png" 
+                alt="Agentable" 
+                width={1000}
+                height={300}
+                className="h-40 w-auto drop-shadow-lg object-cover object-center"
+                style={{
+                  clipPath: 'inset(35% 0 25% 0)'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Main Chat Interface */}
+          <div className={`w-full max-w-2xl transition-all duration-800 ${
+            isTransitioning 
+              ? 'transform scale-110 opacity-0' 
+              : 'transform scale-100 opacity-100'
+          }`}>
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/20">
+              <div className={`mb-6 text-center transition-all duration-800 ${
+                isTransitioning ? 'opacity-0' : 'opacity-100'
+              }`}>
+                <h2 className="text-2xl font-semibold text-[#2C3E50] mb-2">What can I help you build today?</h2>
+                <p className="text-[#2C3E50]/70">Describe your task and I'll create the perfect AI crew to complete it</p>
+              </div>
+              
+              {/* Landing Chat Input */}
+              <div className="space-y-4">
+                <LandingChatInput onSubmit={handleChatSubmit} isLoading={status === 'running'} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen bg-[#F7F9FA] flex flex-col">
+    <div className="h-screen bg-[#F7F9FA] flex flex-col transition-all duration-500">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center">
             <Image 
-              src="/agentablelogo.png" 
+              src="/agentablelogoblacktext.png" 
               alt="Agentable" 
-              width={32}
-              height={32}
+              width={200}
+              height={40}
               className="h-8 w-auto"
             />
-            <div>
-              <h1 className="text-2xl font-bold text-[#1F3A93]">Agentable</h1>
+            <div className="ml-3">
               <p className="text-sm text-[#2C3E50]">Automate Intelligently, Deliver Powerfully</p>
             </div>
           </div>
